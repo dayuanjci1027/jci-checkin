@@ -3,63 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>青商會全能活動管理系統 V10.0 (雲端驗證版)</title>
+    <title>JCI 活動管理系統 V12.0</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
-        :root { --primary: #1a237e; --accent: #ff6f00; --bg: #f4f6f8; }
-        body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background: var(--bg); height: 100vh; display: flex; flex-direction: column; }
+        :root { 
+            --jci-blue: #0097D7; /* 青商藍 */
+            --jci-dark: #005780;
+            --accent: #FFC107; 
+            --bg-gradient: linear-gradient(135deg, #0097D7 0%, #005780 100%);
+        }
+        
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            margin: 0; 
+            background: #f0f2f5; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+        }
 
-        /* 導航列 */
-        #nav-bar { background: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); z-index: 100; }
-        .nav-group { display: flex; gap: 10px; }
-        .nav-item { cursor: pointer; color: #666; font-weight: bold; padding: 8px 12px; border-radius: 8px; transition: 0.2s; }
-        .nav-item.active { background: var(--primary); color: white; }
-        .event-badge { background: var(--accent); color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(255, 111, 0, 0.3); }
+        /* --- 頂部導航 (簡約白底) --- */
+        #nav-bar { 
+            background: rgba(255, 255, 255, 0.95); 
+            backdrop-filter: blur(10px);
+            padding: 10px 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05); 
+            z-index: 100; 
+            position: sticky; top: 0;
+        }
+        .nav-group { display: flex; gap: 5px; }
+        .nav-item { 
+            cursor: pointer; color: #666; font-weight: 500; 
+            padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; 
+            transition: all 0.3s ease; 
+        }
+        .nav-item.active { 
+            background: var(--jci-blue); color: white; box-shadow: 0 2px 10px rgba(0,151,215,0.3);
+        }
+        .event-badge { 
+            background: #333; color: white; padding: 6px 15px; border-radius: 20px; 
+            font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 5px;
+        }
 
-        /* 頁面容器 */
-        .page { display: none; flex: 1; overflow-y: auto; padding: 20px; }
-        .page.active { display: block; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* --- 頁面容器 --- */
+        .page { display: none; flex: 1; overflow-y: auto; padding: 20px; animation: fadeIn 0.4s ease-out; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* P0. 活動大廳 */
-        .event-card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 6px solid #ccc; cursor: pointer; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s; }
-        .event-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .event-card.active { border-left-color: var(--accent); background: #fff8e1; }
+        /* --- P1. 超美登入介面 --- */
+        .login-bg {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 80vh;
+        }
+        .login-card { 
+            background: white; 
+            width: 100%; max-width: 380px; 
+            padding: 40px; 
+            border-radius: 24px; 
+            text-align: center; 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1); 
+            position: relative;
+            overflow: hidden;
+        }
+        /* 裝飾線條 */
+        .login-card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px;
+            background: var(--bg-gradient);
+        }
+        .login-title { font-size: 1.8rem; font-weight: 700; color: #333; margin-bottom: 5px; }
+        .login-subtitle { font-size: 0.9rem; color: #888; margin-bottom: 30px; }
 
-        /* P1. 會員登入 */
-        .login-card { background: white; padding: 40px 30px; border-radius: 15px; max-width: 400px; margin: 30px auto; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .login-input { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; background: #fafafa; }
-        .login-input:focus { border-color: var(--primary); background: white; outline: none; }
-        .btn-main { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; }
-        .btn-main:active { transform: scale(0.98); }
+        .input-group { text-align: left; margin-bottom: 20px; }
+        .input-label { display: block; font-size: 0.85rem; color: #666; margin-bottom: 8px; font-weight: bold; }
+        .styled-input { 
+            width: 100%; padding: 14px 16px; 
+            border: 2px solid #eee; border-radius: 12px; 
+            font-size: 1rem; transition: 0.3s; box-sizing: border-box;
+        }
+        .styled-input:focus { 
+            border-color: var(--jci-blue); outline: none; background: #f9fcff; 
+        }
 
-        /* P2. 接待櫃台 */
-        .guest-item { background: white; padding: 15px; margin-bottom: 10px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .guest-item.arrived { border-left-color: var(--primary); background: #e8eaf6; }
-        .btn-scan { width: 100%; padding: 15px; background: #ff5722; color: white; border: none; border-radius: 10px; font-weight: bold; margin-bottom: 15px; cursor: pointer; box-shadow: 0 4px 10px rgba(255, 87, 34, 0.3); }
+        .btn-gradient { 
+            width: 100%; padding: 16px; 
+            background: var(--bg-gradient); color: white; 
+            border: none; border-radius: 12px; 
+            font-weight: bold; font-size: 1rem; cursor: pointer; 
+            transition: 0.3s; margin-top: 10px;
+            box-shadow: 0 5px 15px rgba(0,151,215,0.3);
+        }
+        .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,151,215,0.4); }
+        .btn-gradient:active { transform: scale(0.98); }
 
-        /* P3. 簽到牆 */
+        /* 驗證成功後的卡片 */
+        #pass-area { 
+            display: none; margin-top: 20px; 
+            border: 2px dashed #0097D7; padding: 20px; border-radius: 15px; background: #f0f9ff;
+        }
+
+        /* --- P0, P2, P3 其他介面優化 --- */
+        .event-card { 
+            background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; cursor: pointer;
+            transition: 0.2s;
+        }
+        .event-card:hover { border-color: var(--jci-blue); transform: translateY(-2px); }
+        .event-card.active { background: #e3f2fd; border-color: var(--jci-blue); }
+
+        .vip-card { 
+            background: white; padding: 20px; border-radius: 16px; text-align: center; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden;
+            transition: 0.3s; border: 2px solid transparent; opacity: 0.7; filter: grayscale(1);
+        }
+        .vip-card.arrived { 
+            opacity: 1; filter: grayscale(0); border-color: var(--jci-blue); 
+            transform: scale(1.05); box-shadow: 0 10px 25px rgba(0,151,215,0.2); 
+        }
+        .avatar { 
+            width: 80px; height: 80px; border-radius: 50%; object-fit: cover; 
+            margin-bottom: 15px; border: 3px solid #f0f2f5; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
-        .vip-card { background: white; padding: 20px; border-radius: 12px; text-align: center; opacity: 0.6; filter: grayscale(1); box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.3s; }
-        .vip-card.arrived { opacity: 1; filter: grayscale(0); border: 2px solid var(--primary); transform: scale(1.05); box-shadow: 0 10px 20px rgba(26, 35, 126, 0.2); }
-        .vip-card img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 3px solid #eee; }
 
-        /* 浮動新增按鈕 */
-        .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 4px 15px rgba(255, 111, 0, 0.4); cursor: pointer; z-index: 200; transition: 0.3s; }
-        .fab:hover { transform: scale(1.1); }
+        /* 浮動按鈕 */
+        .fab { 
+            position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; 
+            background: var(--jci-blue); color: white; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; font-size: 2rem; 
+            box-shadow: 0 4px 20px rgba(0,151,215,0.4); cursor: pointer; z-index: 200; transition: 0.3s; 
+        }
+        .fab:hover { transform: scale(1.1) rotate(90deg); }
+
+        /* 掃描相關 */
+        #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
+
     </style>
 </head>
 <body>
 
     <div id="nav-bar">
-        <div class="event-badge" onclick="goPage('home')" id="current-event-display">尚未選擇活動</div>
+        <div class="event-badge" onclick="goPage('home')" id="current-event-display">
+            <span>🏠</span> 尚未選擇活動
+        </div>
         <div class="nav-group">
             <div class="nav-item" onclick="goPage('member')">會員</div>
             <div class="nav-item" onclick="goPage('reception')">櫃台</div>
@@ -68,64 +166,88 @@
     </div>
 
     <div id="page-home" class="page active">
-        <h2 style="color:#333; margin-top:0;">🏠 活動列表</h2>
+        <h2 style="color:#333; margin: 10px 0 20px;">📅 活動列表</h2>
         <div id="event-list">載入中...</div>
         <div class="fab" onclick="createNewEvent()">+</div>
+        
+        <div style="text-align:center; margin-top:40px;">
+            <button onclick="showSiteQR()" style="background:white; border:1px solid #ddd; padding:10px 20px; border-radius:30px; cursor:pointer; font-weight:bold; color:#555; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+                📱 顯示入場掃描用 QR Code
+            </button>
+        </div>
     </div>
 
     <div id="page-member" class="page">
-        <div class="login-card">
-            <h2 style="margin-top:0; color:var(--primary);">會員電子通行證</h2>
-            <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">驗證身分以取得您的永久 QR Code</p>
-            
-            <div id="login-form">
-                <input type="text" id="login-id" class="login-input" placeholder="身分證字號 (例如 A123456789)">
-                <input type="text" id="login-dob" class="login-input" placeholder="出生年月日 (例如 0660101)">
-                <button id="btn-verify" class="btn-main" onclick="verifyWithGoogle()">驗證登入</button>
-            </div>
+        <div class="login-bg">
+            <div class="login-card">
+                <div style="font-size:3rem; margin-bottom:10px;">🆔</div>
+                
+                <div class="login-title">會員報到系統</div>
+                <div class="login-subtitle">JCI Member Check-in</div>
+                
+                <div id="login-form">
+                    <div class="input-group">
+                        <label class="input-label">身分證字號</label>
+                        <input type="text" id="login-id" class="styled-input" placeholder="例如：A123456789">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">出生年月日</label>
+                        <input type="text" id="login-dob" class="styled-input" placeholder="例如：0660101">
+                    </div>
+                    <button id="btn-verify" class="btn-gradient" onclick="verifyWithGoogle()">確認登入</button>
+                </div>
 
-            <div id="pass-area" style="display:none; margin-top:30px; border-top:1px dashed #ccc; padding-top:20px;">
-                <div style="font-size:0.9rem; color:#666;">歡迎回來</div>
-                <div id="pass-name" style="font-weight:bold; color:var(--primary); font-size:1.4rem; margin-bottom:15px;"></div>
-                <div id="qrcode" style="display:inline-block; border: 5px solid white; box-shadow: 0 0 15px rgba(0,0,0,0.1);"></div>
-                <p style="color:#d32f2f; font-size:0.8rem; margin-top:15px; font-weight:bold;">⚠️ 此碼永久有效，請截圖保存</p>
-                <button onclick="location.reload()" style="background:none; border:none; color:#999; text-decoration:underline; cursor:pointer; margin-top:10px;">重新登入</button>
+                <div id="pass-area">
+                    <img id="pass-photo" class="avatar" style="width:100px; height:100px;" src="">
+                    <div style="font-size:0.9rem; color:#666;">WELCOME</div>
+                    <div id="pass-name" style="font-weight:bold; color:var(--jci-dark); font-size:1.5rem; margin-bottom:5px;"></div>
+                    <div id="pass-title" style="color:#888; font-size:0.9rem; margin-bottom:15px;"></div>
+                    
+                    <div id="qrcode" style="display:inline-block; border: 8px solid white; box-shadow: 0 5px 20px rgba(0,0,0,0.1); border-radius: 10px;"></div>
+                    
+                    <div style="margin-top:15px; padding:10px; background:#fff3cd; color:#856404; font-size:0.8rem; border-radius:8px;">
+                        請截圖此畫面，於入場處出示
+                    </div>
+                    <button onclick="location.reload()" style="background:none; border:none; color:#999; margin-top:15px; cursor:pointer; text-decoration:underline;">重新登入</button>
+                </div>
             </div>
         </div>
     </div>
 
     <div id="page-reception" class="page">
-        <button id="btn-cam" class="btn-scan" onclick="toggleCamera()">📷 啟動相機掃描</button>
-        
-        <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:10px; margin-bottom:15px;">
+        <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px;" onclick="toggleCamera()">📷 掃描 QR Code</button>
+        <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:15px; margin-bottom:20px; overflow:hidden;">
             <div id="reader"></div>
         </div>
-        
-        <input type="text" id="search-box" placeholder="🔍 搜尋本場次名單 (姓名)..." class="login-input" onkeyup="renderReception()">
-        
-        <div style="margin-top:10px; font-size:0.9rem; color:#666;">名單列表：</div>
+        <div style="position:relative; margin-bottom:15px;">
+            <input type="text" id="search-box" placeholder="🔍 搜尋名單..." class="styled-input" onkeyup="renderReception()">
+        </div>
         <div id="reception-list"></div>
     </div>
 
     <div id="page-dashboard" class="page">
-        <div style="background:white; padding:20px; border-radius:12px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-            <label style="background:var(--primary); color:white; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">
-                📂 匯入本場次 Excel 名單
-                <input type="file" style="display:none" onchange="importExcel(this)">
-            </label>
-            <button onclick="exportCSV()" style="border:1px solid #ccc; background:white; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">📥 匯出紀錄</button>
-            <button onclick="deleteEvent()" style="border:1px solid #ffcdd2; color:#c62828; background:#ffebee; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; margin-left:auto;">🗑️ 刪除此活動</button>
+        <div style="background:white; padding:20px; border-radius:16px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <button onclick="syncFromCloud()" class="btn-gradient" style="width:auto; padding:10px 20px; margin-top:0;">
+                ☁️ 從 Google 雲端同步名單
+            </button>
+            <button onclick="exportCSV()" style="border:1px solid #ddd; background:white; padding:10px 20px; border-radius:12px; cursor:pointer; font-weight:bold;">📥 匯出</button>
+            <button onclick="deleteEvent()" style="border:1px solid #ffcdd2; color:#c62828; background:#ffebee; padding:10px 20px; border-radius:12px; cursor:pointer; font-weight:bold; margin-left:auto;">🗑️ 刪除</button>
         </div>
-        
         <div id="dashboard-grid" class="grid"></div>
+    </div>
+
+    <div id="site-qr-modal" onclick="this.style.display='none'">
+        <div id="site-qr-box" onclick="event.stopPropagation()">
+            <h2 style="margin:0 0 10px 0; color:var(--jci-blue);">會員掃碼入場</h2>
+            <div id="site-qrcode" style="margin:20px;"></div>
+            <p style="color:#666; font-size:0.9rem;">請掃描此碼登入領取電子通行證</p>
+        </div>
     </div>
 
     <script>
         // ==========================================
-        // ★★★ 設定區 (請在此填入您的資料) ★★★
+        // ★★★ 設定區 ★★★
         // ==========================================
-        
-        // 1. Firebase Config (請從 Firebase 後台複製)
         const firebaseConfig = {
   apiKey: "AIzaSyDLq7SrkQaCnjtsFArh0leKPJRbPFZTZnk",
   authDomain: "checkin2025-f0bb9.firebaseapp.com",
@@ -136,56 +258,60 @@
   appId: "1:526526638146:web:c69e758e8b3c1d5990e5db",
   measurementId: "G-SDY39SN348"
 };
-
-        // 2. Google Apps Script 網址 (請從 Apps Script 部署取得)
+        // 請填入您的 Google Apps Script 網址
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyY1tcF_pR1vtF3NU1S4W36dsCpfTKejIK0hJ7kYy4Tyqy2JhEb5JT6ipTVhZpJUIR-8w/exec";
-
-        // ==========================================
-        // 系統邏輯開始 (以下不用動)
         // ==========================================
 
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/847/847969.png";
-
+        
         let currentEventId = null;
         let guestsData = {};
         let allEvents = {};
         let scanner = null;
         let isScanning = false;
 
-        // 監聽活動列表
-        db.ref('events_meta').on('value', snap => {
-            allEvents = snap.val() || {};
-            renderEventList();
-        });
+        // 初始化
+        db.ref('events_meta').on('value', snap => { allEvents = snap.val() || {}; renderEventList(); });
 
-        // ------------------------------------------
-        // 0. 活動大廳
-        // ------------------------------------------
+        // 導航
+        function goPage(p) {
+            if (!currentEventId && p !== 'home' && p !== 'member') return Swal.fire("請先在活動大廳選擇一個活動");
+            document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
+            document.getElementById('page-' + p).classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+            // 找出對應的 nav item
+            const navMap = {'member':0, 'reception':1, 'dashboard':2};
+            if(navMap[p] !== undefined) document.querySelectorAll('.nav-item')[navMap[p]].classList.add('active');
+
+            if(p !== 'reception') stopCamera();
+        }
+
+        // P0. 活動大廳
         function createNewEvent() {
-            Swal.fire({ title: '建立新活動', input: 'text', inputLabel: '輸入活動名稱', showCancelButton: true }).then((result) => {
-                if (result.isConfirmed && result.value) {
+            Swal.fire({ title: '建立新活動', input: 'text', showCancelButton: true }).then((r) => {
+                if (r.isConfirmed && r.value) {
                     const id = 'evt_' + Date.now();
-                    db.ref('events_meta/' + id).set({ id: id, name: result.value, created: Date.now() });
-                    selectEvent(id, result.value);
+                    db.ref('events_meta/' + id).set({ id: id, name: r.value, created: Date.now() });
+                    selectEvent(id, r.value);
                 }
             });
         }
         function renderEventList() {
             const list = document.getElementById('event-list');
             list.innerHTML = '';
-            if(Object.keys(allEvents).length === 0) { list.innerHTML = '<div style="text-align:center; color:#999; padding:20px;">目前無活動，請按右下角 + 新增</div>'; return; }
             Object.values(allEvents).sort((a,b)=>b.created-a.created).forEach(evt => {
                 const div = document.createElement('div');
                 div.className = `event-card ${evt.id === currentEventId ? 'active' : ''}`;
-                div.innerHTML = `<div><div style="font-weight:bold; font-size:1.1rem;">${evt.name}</div><div style="font-size:0.8rem; color:#888;">${new Date(evt.created).toLocaleDateString()}</div></div><button onclick="selectEvent('${evt.id}','${evt.name}')" style="background:var(--primary);color:white;border:none;padding:8px 16px;border-radius:20px;cursor:pointer">進入</button>`;
+                div.innerHTML = `<div><div style="font-weight:bold">${evt.name}</div><div style="font-size:0.8rem;color:#888">${new Date(evt.created).toLocaleDateString()}</div></div><button onclick="selectEvent('${evt.id}','${evt.name}')" style="background:var(--jci-blue);color:white;border:none;padding:6px 15px;border-radius:20px;cursor:pointer">進入</button>`;
                 list.appendChild(div);
             });
         }
         function selectEvent(id, name) {
             currentEventId = id;
-            document.getElementById('current-event-display').innerText = `目前：${name}`;
+            document.getElementById('current-event-display').innerHTML = `<span>📅</span> ${name}`;
             db.ref(`events_data/${id}`).off();
             db.ref(`events_data/${id}`).on('value', snap => {
                 guestsData = snap.val() || {};
@@ -193,74 +319,44 @@
                 renderDashboard();
             });
             goPage('reception');
-            Swal.fire({ icon: 'success', title: `已切換至：${name}`, timer: 1000, showConfirmButton: false });
         }
         function deleteEvent() {
-            if(!currentEventId || !confirm("確定要刪除此活動？資料將無法復原！")) return;
+            if(!currentEventId || !confirm("確定刪除此活動？")) return;
             db.ref(`events_meta/${currentEventId}`).remove();
             db.ref(`events_data/${currentEventId}`).remove();
             currentEventId = null;
-            document.getElementById('current-event-display').innerText = "尚未選擇活動";
-            guestsData = {};
+            document.getElementById('current-event-display').innerHTML = "<span>🏠</span> 尚未選擇活動";
             goPage('home');
         }
 
-        function goPage(p) {
-            // 會員頁面不需要選活動，其他頁面需要
-            if (!currentEventId && p !== 'home' && p !== 'member') return Swal.fire("請先在活動大廳選擇一個活動");
-            document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
-            document.getElementById('page-' + p).classList.add('active');
-            if(p !== 'reception') stopCamera();
-        }
-
-        // ------------------------------------------
-        // 1. 會員驗證 (Call Google GAS)
-        // ------------------------------------------
+        // P1. 會員驗證 (帶照片)
         function verifyWithGoogle() {
             const id = document.getElementById('login-id').value.trim().toUpperCase();
             const dob = document.getElementById('login-dob').value.trim();
             const btn = document.getElementById('btn-verify');
-            
             if (!id || !dob) return Swal.fire("請輸入完整資料");
             
-            btn.innerText = "雲端驗證中..."; 
-            btn.disabled = true;
-
-            fetch(`${GOOGLE_SCRIPT_URL}?id=${id}&dob=${dob}`)
-                .then(r => r.json())
-                .then(data => {
-                    btn.innerText = "驗證登入"; 
-                    btn.disabled = false;
-                    
-                    if (data.status === 'success') {
-                        document.getElementById('login-form').style.display = 'none';
-                        document.getElementById('pass-area').style.display = 'block';
-                        document.getElementById('pass-name').innerText = `${data.name} (${data.title})`;
-                        document.getElementById('qrcode').innerHTML = '';
-                        // 產生加密 ID 的 QR Code
-                        new QRCode(document.getElementById('qrcode'), { 
-                            text: data.uid, width: 180, height: 180,
-                            colorDark : "#1a237e", colorLight : "#ffffff"
-                        });
-                        Swal.fire({ icon: 'success', title: '驗證成功', text: '請保存您的 QR Code', showConfirmButton: false, timer: 1500 });
-                    } else {
-                        Swal.fire("驗證失敗", "找不到資料，請確認輸入是否正確", "error");
-                    }
-                })
-                .catch(err => {
-                    btn.innerText = "驗證登入"; btn.disabled = false;
-                    Swal.fire("連線錯誤", "無法連接 Google 伺服器", "error");
-                });
+            btn.innerText = "驗證中..."; btn.disabled = true;
+            fetch(`${GOOGLE_SCRIPT_URL}?id=${id}&dob=${dob}`).then(r => r.json()).then(d => {
+                btn.innerText = "確認登入"; btn.disabled = false;
+                if (d.status === 'success') {
+                    document.getElementById('login-form').style.display='none';
+                    document.getElementById('pass-area').style.display='block';
+                    document.getElementById('pass-name').innerText = d.name;
+                    document.getElementById('pass-title').innerText = d.title;
+                    document.getElementById('pass-photo').src = d.photo || defaultAvatar;
+                    document.getElementById('qrcode').innerHTML = '';
+                    new QRCode(document.getElementById('qrcode'), { text: d.uid, width: 180, height: 180, colorDark : "#005780" });
+                } else { Swal.fire("驗證失敗", "資料不符", "error"); }
+            }).catch(()=> { btn.innerText="確認登入"; btn.disabled=false; Swal.fire("連線錯誤", "請檢查網路", "error"); });
         }
 
-        // ------------------------------------------
-        // 2. 接待櫃台
-        // ------------------------------------------
+        // P2. 接待
         function toggleCamera() { isScanning ? stopCamera() : startCamera(); }
         function startCamera() {
             document.getElementById('scanner-view').style.display = 'block';
             document.getElementById('btn-cam').innerText = "❌ 關閉相機";
-            document.getElementById('btn-cam').style.backgroundColor = "#333";
+            document.getElementById('btn-cam').style.background = "#333";
             scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
             scanner.render(onScanSuccess);
             isScanning = true;
@@ -268,25 +364,17 @@
         function stopCamera() {
             if(scanner) { scanner.clear(); scanner = null; }
             document.getElementById('scanner-view').style.display = 'none';
-            document.getElementById('btn-cam').innerText = "📷 啟動相機掃描";
-            document.getElementById('btn-cam').style.backgroundColor = "#ff5722";
+            document.getElementById('btn-cam').innerText = "📷 掃描 QR Code";
+            document.getElementById('btn-cam').style.background = "linear-gradient(45deg, #ff5722, #ff9800)";
             isScanning = false;
         }
         function onScanSuccess(uid) {
-            // 比對 UID
             if(guestsData[uid]) {
                 if(!guestsData[uid].arrived) {
                     checkIn(uid, true);
                     Swal.fire({ icon: 'success', title: guestsData[uid].name, text: '簽到成功', timer: 1000, showConfirmButton: false });
-                } else { Swal.fire("重複", "這位貴賓已入場", "warning"); }
-            } else { 
-                Swal.fire({
-                    icon: 'error', 
-                    title: '非本場名單', 
-                    text: '此 QR Code 未在本次活動名單中 (請確認是否匯入或為友會來賓)',
-                    footer: `掃描到的 ID: ${uid}`
-                }); 
-            }
+                } else { Swal.fire("重複", "已入場", "warning"); }
+            } else { Swal.fire("錯誤", "非本場名單", "error"); }
         }
         function renderReception() {
             const list = document.getElementById('reception-list');
@@ -294,61 +382,48 @@
             list.innerHTML = '';
             Object.values(guestsData).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).forEach(g => {
                 if(search && g.name.indexOf(search) === -1) return;
-                const div = document.createElement('div');
-                div.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
-                div.innerHTML = `<div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div><button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:8px 16px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--primary)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>`;
-                list.appendChild(div);
+                const d = document.createElement('div');
+                d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
+                d.innerHTML = `<div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div><button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>`;
+                list.appendChild(d);
             });
         }
         function checkIn(id, status) {
             db.ref(`events_data/${currentEventId}/${id}`).update({ arrived: status, timestamp: status ? firebase.database.ServerValue.TIMESTAMP : 0 });
         }
 
-        // ------------------------------------------
-        // 3. 牆面 & 匯入匯出
-        // ------------------------------------------
+        // P3. 牆面 & 雲端同步
         function renderDashboard() {
             const grid = document.getElementById('dashboard-grid');
             grid.innerHTML = '';
             Object.values(guestsData).forEach(g => {
-                const div = document.createElement('div');
-                div.className = `vip-card ${g.arrived ? 'arrived' : ''}`;
-                div.innerHTML = `<img src="${g.photo||defaultAvatar}"><div style="font-weight:bold;margin:10px 0;font-size:1.1rem;">${g.name}</div><div style="font-size:0.9rem;color:#666">${g.title}</div>${g.arrived?'<div style="color:var(--primary);font-weight:bold;margin-top:5px">已到</div>':''}`;
-                grid.appendChild(div);
+                const d = document.createElement('div');
+                d.className = `vip-card ${g.arrived ? 'arrived' : ''}`;
+                d.innerHTML = `<img src="${g.photo||defaultAvatar}" class="avatar"><div style="font-weight:bold;margin-bottom:5px;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title}</div>${g.arrived?'<div style="color:var(--jci-blue);font-weight:bold;margin-top:10px">已到</div>':''}`;
+                grid.appendChild(d);
             });
         }
-        function importExcel(input) {
-            const file = input.files[0];
-            if(!file || !confirm("確定要將名單匯入至【"+document.getElementById('current-event-display').innerText+"】嗎？\n(這會覆蓋現有名單)")) return;
-            const reader = new FileReader();
-            reader.onload = e => {
-                const wb = XLSX.read(e.target.result, {type:'array'});
-                const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        function syncFromCloud() {
+            if(!confirm("確定從 Google 雲端同步？\n(將匯入 All_Data 分頁名單)")) return;
+            Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
+            fetch(`${GOOGLE_SCRIPT_URL}?op=get_all`).then(r => r.json()).then(data => {
                 const newData = {};
-                json.forEach((row, i) => {
-                    // 如果沒有系統ID，就自動編號 (建議總表要有系統ID)
-                    const uid = row['系統ID'] || ('u' + (i+1).toString().padStart(3,'0'));
-                    newData[uid] = { 
-                        id: uid, 
-                        name: row['姓名'] || row['name'], 
-                        title: row['職稱'] || row['title'], 
-                        group: row['分類'] || row['group'] || 'guest', 
-                        photo: row['照片'] || row['photo'] || '', 
-                        arrived: false, 
-                        timestamp: 0 
-                    };
+                data.forEach(row => {
+                    newData[row.id] = { id: row.id, name: row.name, title: row.title, group: row.group, photo: row.photo, arrived: false, timestamp: 0 };
                 });
-                db.ref(`events_data/${currentEventId}`).set(newData).then(() => alert("名單匯入成功！"));
-            };
-            reader.readAsArrayBuffer(file);
+                db.ref(`events_data/${currentEventId}`).set(newData).then(() => Swal.fire("同步成功", `匯入 ${data.length} 筆`, "success"));
+            }).catch(()=> Swal.fire("失敗", "檢查腳本部署", "error"));
         }
         function exportCSV() {
-            let csv = "\uFEFF姓名,職稱,分類,狀態,時間\n";
-            Object.values(guestsData).forEach(g => { 
-                const t = g.arrived && g.timestamp ? new Date(g.timestamp).toLocaleTimeString() : "";
-                csv += `${g.name},${g.title},${g.group},${g.arrived?'已到':'未到'},${t}\n`; 
-            });
-            const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); link.download = `簽到表_${new Date().toLocaleDateString()}.csv`; link.click();
+            let csv = "\uFEFF姓名,職稱,狀態,時間\n";
+            Object.values(guestsData).forEach(g => { csv += `${g.name},${g.title},${g.arrived?'已到':'未到'},${g.arrived && g.timestamp ? new Date(g.timestamp).toLocaleTimeString() : ""}\n`; });
+            const l = document.createElement("a"); l.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); l.download = "record.csv"; l.click();
+        }
+
+        function showSiteQR() {
+            document.getElementById('site-qr-modal').style.display = 'flex';
+            document.getElementById('site-qrcode').innerHTML = '';
+            new QRCode(document.getElementById('site-qrcode'), { text: window.location.href, width: 250, height: 250 });
         }
     </script>
 </body>
