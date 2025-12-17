@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCI 活動管理系統 V13.0</title>
+    <title>JCI 活動管理系統 V14.0 (完整版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -184,6 +184,9 @@
             0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; }
         }
 
+        /* SweetAlert2 自定義樣式調整 */
+        .swal2-input { font-size: 1rem !important; }
+
     </style>
 </head>
 <body>
@@ -226,7 +229,7 @@
                     </div>
                     <div class="input-group">
                         <label class="input-label">出生年月日</label>
-                        <input type="text" id="login-dob" class="styled-input" placeholder="例如：0660101">
+                        <input type="text" id="login-dob" class="styled-input" placeholder="例如：19920101">
                     </div>
                     <button id="btn-verify" class="btn-gradient" onclick="verifyWithGoogle()">確認登入</button>
                 </div>
@@ -254,9 +257,11 @@
         <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px;" onclick="toggleCamera()">📷 掃描 QR Code</button>
         
         <div style="background:white; padding:15px; border-radius:10px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; border:1px solid #eee;">
+            <button onclick="addNewGuest()" style="background:var(--jci-blue); color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1;">➕ 新增現場來賓</button>
+            
             <button onclick="syncFromCloud()" style="background:#007bff; color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold;">☁️ 同步名單</button>
             <button onclick="exportCSV()" style="background:#28a745; color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold;">📥 匯出紀錄</button>
-            <button onclick="deleteEvent()" style="background:#ffebee; color:#c62828; border:1px solid #ffcdd2; padding:10px 15px; border-radius:8px; cursor:pointer; margin-left:auto;">🗑️ 重置活動</button>
+            <button onclick="deleteEvent()" style="background:#ffebee; color:#c62828; border:1px solid #ffcdd2; padding:10px 15px; border-radius:8px; cursor:pointer; margin-left:auto;">🗑️ 重置</button>
         </div>
 
         <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:15px; margin-bottom:20px; overflow:hidden;">
@@ -298,7 +303,7 @@
             appId: "1:526526638146:web:c69e758e8b3c1d5990e5db",
             measurementId: "G-SDY39SN348"
         };
-        // 請確認您的 GAS 網址是否正確
+        // ★ 請務必確認您的 GAS 網址 (如果重新部署過，請更新這裡)
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyY1tcF_pR1vtF3NU1S4W36dsCpfTKejIK0hJ7kYy4Tyqy2JhEb5JT6ipTVhZpJUIR-8w/exec";
         // ==========================================
 
@@ -315,7 +320,7 @@
         // 初始化
         db.ref('events_meta').on('value', snap => { allEvents = snap.val() || {}; renderEventList(); });
 
-        // ★★★ 檢查網址參數，如果是會員模式，強制鎖定介面 ★★★
+        // ★★★ 檢查網址參數，如果是會員模式 (?mode=entry)，強制鎖定介面 ★★★
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('mode') === 'entry') {
@@ -455,11 +460,18 @@
             
             // 1. 過濾 & 轉換
             let list = Object.values(guestsData).filter(g => {
+                // 如果是未到，完全不顯示
                 if (!g.arrived) return false;
+
+                // 規則：External 或 Official -> 顯示
                 if (g.group === 'External' || g.group === 'Official') return true;
+                
+                // 規則：Internal -> 檢查 Title 是否含 會長 或 主席
                 if ((g.group === 'Internal' || g.group === 'internal') && g.title) {
                      if (g.title.indexOf('會長') > -1 || g.title.indexOf('主席') > -1) return true;
                 }
+                
+                // 其他 (一般 Member) -> 不顯示
                 return false;
             });
 
@@ -483,9 +495,10 @@
                 let customClass = '';
 
                 if (!g.acked) {
-                    customClass = 'vip-card active-light'; // 亮燈
-                    d.onclick = function() { ackGuest(g.id); };
+                    customClass = 'vip-card active-light'; // 亮燈特效
+                    d.onclick = function() { ackGuest(g.id); }; // 點擊消燈
                     d.style.cursor = "pointer";
+                    // 亮燈時顯示大字
                     d.innerHTML = `
                         <img src="${g.photo||defaultAvatar}" class="avatar">
                         <div style="font-weight:bold;margin-bottom:5px;font-size:2.5rem;">${g.name}</div>
@@ -495,7 +508,8 @@
                         <div style="font-size:0.9rem;color:#888;margin-top:20px;">(點擊畫面消燈)</div>
                     `;
                 } else {
-                    customClass = 'vip-card acked-card'; // 已閱
+                    customClass = 'vip-card acked-card'; // 已閱樣式
+                    // 已閱時顯示小字
                     d.innerHTML = `
                         <img src="${g.photo||defaultAvatar}" class="avatar" style="width:60px;height:60px;">
                         <div style="font-weight:bold;margin-bottom:5px;font-size:1.2rem;">${g.name}</div>
@@ -510,9 +524,62 @@
             db.ref(`events_data/${currentEventId}/${id}`).update({ acked: true });
         }
 
+        // ★★★ 新增現場來賓功能 ★★★
+        function addNewGuest() {
+            Swal.fire({
+                title: '新增現場來賓',
+                html: `
+                    <div style="text-align:left; font-size:0.9rem; color:#666; margin-bottom:5px;">姓名</div>
+                    <input id="swal-name" class="swal2-input" placeholder="輸入姓名" style="margin:0 0 15px 0; width:80%;">
+                    
+                    <div style="text-align:left; font-size:0.9rem; color:#666; margin-bottom:5px;">職稱</div>
+                    <input id="swal-title" class="swal2-input" placeholder="例如：會長、局長" style="margin:0 0 15px 0; width:80%;">
+                    
+                    <div style="text-align:left; font-size:0.9rem; color:#666; margin-bottom:5px;">分類 (決定牆面是否顯示)</div>
+                    <select id="swal-group" class="swal2-input" style="margin:0; width:80%;">
+                        <option value="External">友會貴賓 (External)</option>
+                        <option value="Official">長官/來賓 (Official)</option>
+                        <option value="Internal">本會會員 (Internal)</option>
+                        <option value="Member">一般會員 (Member)</option>
+                    </select>
+                `,
+                showCancelButton: true,
+                confirmButtonText: '新增並直接報到',
+                cancelButtonText: '取消',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const name = document.getElementById('swal-name').value;
+                    const title = document.getElementById('swal-title').value;
+                    const group = document.getElementById('swal-group').value;
+                    if (!name) {
+                        Swal.showValidationMessage('請輸入姓名');
+                    }
+                    return { name: name, title: title, group: group };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const data = result.value;
+                    const newId = "walkin_" + Date.now();
+                    
+                    db.ref(`events_data/${currentEventId}/${newId}`).set({
+                        id: newId,
+                        name: data.name,
+                        title: data.title || '貴賓',
+                        group: data.group,
+                        photo: "",
+                        arrived: true,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP,
+                        acked: false // 未讀 -> 亮燈
+                    });
+
+                    Swal.fire({ icon: 'success', title: '新增成功', text: `${data.name} 已完成報到`, timer: 1500, showConfirmButton: false });
+                }
+            });
+        }
+
         // 資料同步與匯出
         function syncFromCloud() {
-            if(!confirm("確定從 Google 雲端同步？\n(將匯入 All_Data 分頁名單)")) return;
+            if(!confirm("確定從 Google 雲端同步？\n(將匯入 Internal/All_Data 分頁名單)")) return;
             Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
             fetch(`${GOOGLE_SCRIPT_URL}?op=get_all`).then(r => r.json()).then(data => {
                 const newData = {};
