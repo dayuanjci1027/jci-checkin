@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCI 活動管理系統 V12.0</title>
+    <title>JCI 活動管理系統 V13.0</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -30,7 +30,7 @@
             flex-direction: column; 
         }
 
-        /* --- 頂部導航 (簡約白底) --- */
+        /* --- 頂部導航 --- */
         #nav-bar { 
             background: rgba(255, 255, 255, 0.95); 
             backdrop-filter: blur(10px);
@@ -42,6 +42,9 @@
             z-index: 100; 
             position: sticky; top: 0;
         }
+        /* 特殊樣式：會員掃碼進入時隱藏導航 */
+        .hide-nav { display: none !important; }
+
         .nav-group { display: flex; gap: 5px; }
         .nav-item { 
             cursor: pointer; color: #666; font-weight: 500; 
@@ -61,7 +64,7 @@
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- P1. 超美登入介面 --- */
+        /* --- 會員登入介面 --- */
         .login-bg {
             display: flex; align-items: center; justify-content: center;
             min-height: 80vh;
@@ -76,7 +79,6 @@
             position: relative;
             overflow: hidden;
         }
-        /* 裝飾線條 */
         .login-card::before {
             content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px;
             background: var(--bg-gradient);
@@ -104,7 +106,6 @@
             box-shadow: 0 5px 15px rgba(0,151,215,0.3);
         }
         .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,151,215,0.4); }
-        .btn-gradient:active { transform: scale(0.98); }
 
         /* 驗證成功後的卡片 */
         #pass-area { 
@@ -112,30 +113,20 @@
             border: 2px dashed #0097D7; padding: 20px; border-radius: 15px; background: #f0f9ff;
         }
 
-        /* --- P0, P2, P3 其他介面優化 --- */
+        /* --- 櫃台與其他介面 --- */
         .event-card { 
             background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; 
             display: flex; justify-content: space-between; align-items: center; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; cursor: pointer;
             transition: 0.2s;
         }
-        .event-card:hover { border-color: var(--jci-blue); transform: translateY(-2px); }
         .event-card.active { background: #e3f2fd; border-color: var(--jci-blue); }
 
-        .vip-card { 
-            background: white; padding: 20px; border-radius: 16px; text-align: center; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden;
-            transition: 0.3s; border: 2px solid transparent; opacity: 0.7; filter: grayscale(1);
+        .guest-item {
+            background: white; padding: 15px; border-bottom: 1px solid #eee; 
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .vip-card.arrived { 
-            opacity: 1; filter: grayscale(0); border-color: var(--jci-blue); 
-            transform: scale(1.05); box-shadow: 0 10px 25px rgba(0,151,215,0.2); 
-        }
-        .avatar { 
-            width: 80px; height: 80px; border-radius: 50%; object-fit: cover; 
-            margin-bottom: 15px; border: 3px solid #f0f2f5; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
+        .guest-item.arrived { background: #f9f9f9; }
 
         /* 浮動按鈕 */
         .fab { 
@@ -144,11 +135,54 @@
             display: flex; align-items: center; justify-content: center; font-size: 2rem; 
             box-shadow: 0 4px 20px rgba(0,151,215,0.4); cursor: pointer; z-index: 200; transition: 0.3s; 
         }
-        .fab:hover { transform: scale(1.1) rotate(90deg); }
 
         /* 掃描相關 */
         #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
+
+        /* --- ★★★ 牆面(Dashboard) 特效區 ★★★ --- */
+        #dashboard-grid {
+            display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; gap: 20px;
+        }
+
+        .vip-card { 
+            background: white; padding: 20px; border-radius: 16px; text-align: center; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden;
+            transition: 0.3s; border: 2px solid transparent;
+        }
+        .avatar { 
+            width: 80px; height: 80px; border-radius: 50%; object-fit: cover; 
+            margin-bottom: 15px; border: 3px solid #f0f2f5; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        /* 1. 剛報到 (亮燈狀態)：巨大、發光、置中 */
+        .vip-card.active-light {
+            position: fixed;
+            top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1.5);
+            z-index: 999;
+            width: 400px;
+            border: 5px solid #FFC107;
+            background: #fff;
+            box-shadow: 0 0 100px rgba(255, 193, 7, 1);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* 2. 已消燈 (已閱狀態)：變小、變暗、排排站 */
+        .vip-card.acked-card {
+            width: 200px;
+            opacity: 0.8;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid var(--jci-blue);
+        }
+
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; }
+        }
 
     </style>
 </head>
@@ -215,25 +249,31 @@
     </div>
 
     <div id="page-reception" class="page">
+        <h2 style="margin-bottom:20px;">報到處控制台</h2>
+        
         <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px;" onclick="toggleCamera()">📷 掃描 QR Code</button>
+        
+        <div style="background:white; padding:15px; border-radius:10px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; border:1px solid #eee;">
+            <button onclick="syncFromCloud()" style="background:#007bff; color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold;">☁️ 同步名單</button>
+            <button onclick="exportCSV()" style="background:#28a745; color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold;">📥 匯出紀錄</button>
+            <button onclick="deleteEvent()" style="background:#ffebee; color:#c62828; border:1px solid #ffcdd2; padding:10px 15px; border-radius:8px; cursor:pointer; margin-left:auto;">🗑️ 重置活動</button>
+        </div>
+
         <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:15px; margin-bottom:20px; overflow:hidden;">
             <div id="reader"></div>
         </div>
+        
         <div style="position:relative; margin-bottom:15px;">
             <input type="text" id="search-box" placeholder="🔍 搜尋名單..." class="styled-input" onkeyup="renderReception()">
         </div>
         <div id="reception-list"></div>
     </div>
 
-    <div id="page-dashboard" class="page">
-        <div style="background:white; padding:20px; border-radius:16px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-            <button onclick="syncFromCloud()" class="btn-gradient" style="width:auto; padding:10px 20px; margin-top:0;">
-                ☁️ 從 Google 雲端同步名單
-            </button>
-            <button onclick="exportCSV()" style="border:1px solid #ddd; background:white; padding:10px 20px; border-radius:12px; cursor:pointer; font-weight:bold;">📥 匯出</button>
-            <button onclick="deleteEvent()" style="border:1px solid #ffcdd2; color:#c62828; background:#ffebee; padding:10px 20px; border-radius:12px; cursor:pointer; font-weight:bold; margin-left:auto;">🗑️ 刪除</button>
+    <div id="page-dashboard" class="page" style="background-color: #111; min-height: 100vh;">
+        <div id="empty-msg" style="color:#555; text-align:center; margin-top:20%; font-size:2rem; display:none;">
+            等待貴賓蒞臨...
         </div>
-        <div id="dashboard-grid" class="grid"></div>
+        <div id="dashboard-grid"></div>
     </div>
 
     <div id="site-qr-modal" onclick="this.style.display='none'">
@@ -249,16 +289,16 @@
         // ★★★ 設定區 ★★★
         // ==========================================
         const firebaseConfig = {
-  apiKey: "AIzaSyDLq7SrkQaCnjtsFArh0leKPJRbPFZTZnk",
-  authDomain: "checkin2025-f0bb9.firebaseapp.com",
-  databaseURL: "https://checkin2025-f0bb9-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "checkin2025-f0bb9",
-  storageBucket: "checkin2025-f0bb9.firebasestorage.app",
-  messagingSenderId: "526526638146",
-  appId: "1:526526638146:web:c69e758e8b3c1d5990e5db",
-  measurementId: "G-SDY39SN348"
-};
-        // 請填入您的 Google Apps Script 網址
+            apiKey: "AIzaSyDLq7SrkQaCnjtsFArh0leKPJRbPFZTZnk",
+            authDomain: "checkin2025-f0bb9.firebaseapp.com",
+            databaseURL: "https://checkin2025-f0bb9-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "checkin2025-f0bb9",
+            storageBucket: "checkin2025-f0bb9.firebasestorage.app",
+            messagingSenderId: "526526638146",
+            appId: "1:526526638146:web:c69e758e8b3c1d5990e5db",
+            measurementId: "G-SDY39SN348"
+        };
+        // 請確認您的 GAS 網址是否正確
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyY1tcF_pR1vtF3NU1S4W36dsCpfTKejIK0hJ7kYy4Tyqy2JhEb5JT6ipTVhZpJUIR-8w/exec";
         // ==========================================
 
@@ -275,6 +315,15 @@
         // 初始化
         db.ref('events_meta').on('value', snap => { allEvents = snap.val() || {}; renderEventList(); });
 
+        // ★★★ 檢查網址參數，如果是會員模式，強制鎖定介面 ★★★
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('mode') === 'entry') {
+                document.getElementById('nav-bar').classList.add('hide-nav');
+                goPage('member');
+            }
+        };
+
         // 導航
         function goPage(p) {
             if (!currentEventId && p !== 'home' && p !== 'member') return Swal.fire("請先在活動大廳選擇一個活動");
@@ -282,7 +331,6 @@
             document.getElementById('page-' + p).classList.add('active');
             
             document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
-            // 找出對應的 nav item
             const navMap = {'member':0, 'reception':1, 'dashboard':2};
             if(navMap[p] !== undefined) document.querySelectorAll('.nav-item')[navMap[p]].classList.add('active');
 
@@ -329,7 +377,7 @@
             goPage('home');
         }
 
-        // P1. 會員驗證 (帶照片)
+        // P1. 會員驗證
         function verifyWithGoogle() {
             const id = document.getElementById('login-id').value.trim().toUpperCase();
             const dob = document.getElementById('login-dob').value.trim();
@@ -351,7 +399,7 @@
             }).catch(()=> { btn.innerText="確認登入"; btn.disabled=false; Swal.fire("連線錯誤", "請檢查網路", "error"); });
         }
 
-        // P2. 接待
+        // P2. 櫃台接待
         function toggleCamera() { isScanning ? stopCamera() : startCamera(); }
         function startCamera() {
             document.getElementById('scanner-view').style.display = 'block';
@@ -388,21 +436,81 @@
                 list.appendChild(d);
             });
         }
+        
+        // ★★★ 核心報到函式 (加入 acked: false 觸發亮燈) ★★★
         function checkIn(id, status) {
-            db.ref(`events_data/${currentEventId}/${id}`).update({ arrived: status, timestamp: status ? firebase.database.ServerValue.TIMESTAMP : 0 });
+            const updates = {
+                arrived: status,
+                timestamp: status ? firebase.database.ServerValue.TIMESTAMP : 0,
+                acked: status ? false : null 
+            };
+            db.ref(`events_data/${currentEventId}/${id}`).update(updates);
         }
 
-        // P3. 牆面 & 雲端同步
+        // P3. 牆面顯示 (Dashboard)
         function renderDashboard() {
             const grid = document.getElementById('dashboard-grid');
+            const emptyMsg = document.getElementById('empty-msg');
             grid.innerHTML = '';
-            Object.values(guestsData).forEach(g => {
+            
+            // 1. 過濾 & 轉換
+            let list = Object.values(guestsData).filter(g => {
+                if (!g.arrived) return false;
+                if (g.group === 'External' || g.group === 'Official') return true;
+                if ((g.group === 'Internal' || g.group === 'internal') && g.title) {
+                     if (g.title.indexOf('會長') > -1 || g.title.indexOf('主席') > -1) return true;
+                }
+                return false;
+            });
+
+            if (list.length === 0) {
+                emptyMsg.style.display = 'block'; return;
+            } else {
+                emptyMsg.style.display = 'none';
+            }
+
+            // 2. 排序：未讀(亮燈)優先 > 時間倒序
+            list.sort((a, b) => {
+                const scoreA = (!a.acked) ? 2 : 1;
+                const scoreB = (!b.acked) ? 2 : 1;
+                if (scoreA !== scoreB) return scoreB - scoreA; 
+                return (b.timestamp || 0) - (a.timestamp || 0);
+            });
+
+            // 3. 渲染
+            list.forEach(g => {
                 const d = document.createElement('div');
-                d.className = `vip-card ${g.arrived ? 'arrived' : ''}`;
-                d.innerHTML = `<img src="${g.photo||defaultAvatar}" class="avatar"><div style="font-weight:bold;margin-bottom:5px;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title}</div>${g.arrived?'<div style="color:var(--jci-blue);font-weight:bold;margin-top:10px">已到</div>':''}`;
+                let customClass = '';
+
+                if (!g.acked) {
+                    customClass = 'vip-card active-light'; // 亮燈
+                    d.onclick = function() { ackGuest(g.id); };
+                    d.style.cursor = "pointer";
+                    d.innerHTML = `
+                        <img src="${g.photo||defaultAvatar}" class="avatar">
+                        <div style="font-weight:bold;margin-bottom:5px;font-size:2.5rem;">${g.name}</div>
+                        <div style="font-size:1.5rem;color:#666">${g.title}</div>
+                        <div style="font-size:1.2rem;background:#eee;display:inline-block;padding:5px 15px;border-radius:10px;margin-top:10px;">${g.group}</div>
+                        <div style="color:#d32f2f;font-weight:bold;margin-top:15px;animation:blink 1s infinite;font-size:1.5rem;">🔥 剛報到 🔥</div>
+                        <div style="font-size:0.9rem;color:#888;margin-top:20px;">(點擊畫面消燈)</div>
+                    `;
+                } else {
+                    customClass = 'vip-card acked-card'; // 已閱
+                    d.innerHTML = `
+                        <img src="${g.photo||defaultAvatar}" class="avatar" style="width:60px;height:60px;">
+                        <div style="font-weight:bold;margin-bottom:5px;font-size:1.2rem;">${g.name}</div>
+                        <div style="font-size:0.9rem;color:#666">${g.title}</div>
+                    `;
+                }
+                d.className = customClass;
                 grid.appendChild(d);
             });
         }
+        function ackGuest(id) {
+            db.ref(`events_data/${currentEventId}/${id}`).update({ acked: true });
+        }
+
+        // 資料同步與匯出
         function syncFromCloud() {
             if(!confirm("確定從 Google 雲端同步？\n(將匯入 All_Data 分頁名單)")) return;
             Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
@@ -423,7 +531,9 @@
         function showSiteQR() {
             document.getElementById('site-qr-modal').style.display = 'flex';
             document.getElementById('site-qrcode').innerHTML = '';
-            new QRCode(document.getElementById('site-qrcode'), { text: window.location.href, width: 250, height: 250 });
+            var cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            var entryUrl = cleanUrl + "?mode=entry";
+            new QRCode(document.getElementById('site-qrcode'), { text: entryUrl, width: 250, height: 250 });
         }
     </script>
 </body>
