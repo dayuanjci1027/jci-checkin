@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCI 活動管理系統 V24 (No-Hallucination)</title>
+    <title>JCI 活動管理系統 V25 (除錯版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -116,7 +116,6 @@
     </div>
 
     <script>
-        // 設定區
         const firebaseConfig = {
             apiKey: "AIzaSyDLq7SrkQaCnjtsFArh0leKPJRbPFZTZnk",
             authDomain: "checkin2025-f0bb9.firebaseapp.com",
@@ -135,7 +134,7 @@
         let guestsData = {};
         let html5QrCode = null;
 
-        // 圖片顯示邏輯 (前端不再組裝網址，直接用後端給的)
+        // 圖片處理
         function getLH3(url) {
             return (url && url.length > 5) ? url : defaultAvatar;
         }
@@ -173,11 +172,9 @@
             goPage('reception');
         }
 
-        // 顯示 QR Code (自動抓取當前 GAS 網址，不用你手填!)
         function showSiteQR() {
             document.getElementById('site-qr-modal').style.display = 'flex';
             document.getElementById('site-qr-target').innerHTML = '';
-            // ★自動抓取當前網址★
             const url = window.location.href.split('?')[0] + "?mode=entry";
             new QRCode(document.getElementById('site-qr-target'), { text: url, width: 250, height: 250 });
         }
@@ -190,43 +187,50 @@
             }
         };
 
-        // ★ 同步功能 (Google Script Run) ★
+        // ★★★ 強健的同步功能 (Debug版) ★★★
         function syncFromCloud() {
             if (!currentEventId) return Swal.fire("錯誤", "請先選擇活動", "error");
             Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
             
             google.script.run.withSuccessHandler(function(jsonString) {
-                try {
-                    const data = JSON.parse(jsonString);
-                    const updates = {};
-                    data.forEach(row => {
-                        const existing = guestsData[row.id];
-                        updates[row.id] = {
-                            id: row.id, name: row.name, title: row.title, group: row.group,
-                            photo: row.photo || "", 
-                            arrived: existing ? existing.arrived : false, 
-                            timestamp: existing ? existing.timestamp : 0,
-                            acked: existing ? existing.acked : null
-                        };
-                    });
-                    db.ref(`events_data/${currentEventId}`).update(updates)
-                      .then(() => Swal.fire("同步成功", `更新 ${data.length} 筆資料`, "success"));
-                } catch(e) {
-                    Swal.fire("錯誤", "資料解析失敗: " + e, "error");
+                const data = JSON.parse(jsonString);
+                
+                // 如果後端回傳錯誤
+                if (data.error) {
+                    Swal.fire("同步錯誤", data.error, "error");
+                    return;
                 }
+
+                const updates = {};
+                data.forEach(row => {
+                    const existing = guestsData[row.id];
+                    updates[row.id] = {
+                        id: row.id, name: row.name, title: row.title, group: row.group,
+                        photo: row.photo || "", 
+                        arrived: existing ? existing.arrived : false, 
+                        timestamp: existing ? existing.timestamp : 0,
+                        acked: existing ? existing.acked : null
+                    };
+                });
+                db.ref(`events_data/${currentEventId}`).update(updates)
+                  .then(() => Swal.fire("同步成功", `更新 ${data.length} 筆資料`, "success"));
+            
             }).withFailureHandler(function(err) {
-                Swal.fire("同步失敗", "請檢查 GAS 權限: " + err, "error");
+                // 如果是伺服器端錯誤，這裡會顯示
+                Swal.fire("嚴重錯誤", "後端連線失敗，請檢查：<br>1. 是否已『新增部署』<br>2. 試算表名稱是否為『會員名單』", "error");
+                console.error(err);
             }).getMemberData();
         }
 
-        // ★ 會員驗證 (Google Script Run) ★
+        // ★★★ 強健的登入功能 (Debug版) ★★★
         function verifyWithGoogle() {
             const id = document.getElementById('login-id').value;
             const dob = document.getElementById('login-dob').value;
             
             google.script.run.withSuccessHandler(function(jsonString) {
                 const d = JSON.parse(jsonString);
-                if(d.status==='success') {
+                
+                if (d.status === 'success') {
                     document.getElementById('login-form').style.display='none';
                     document.querySelector('.login-subtitle').style.display='none';
                     document.getElementById('pass-area').style.display='block';
@@ -235,7 +239,14 @@
                     document.getElementById('pass-photo').src=getLH3(d.photo);
                     document.getElementById('qrcode').innerHTML='';
                     new QRCode(document.getElementById('qrcode'), {text:d.uid, width:150, height:150, colorDark : "#005780"});
-                } else Swal.fire("失敗", "資料錯誤", "error");
+                } else if (d.status === 'error') {
+                    Swal.fire("程式錯誤", d.msg, "error");
+                } else {
+                    Swal.fire("驗證失敗", d.msg || "資料不符", "error");
+                }
+
+            }).withFailureHandler(function(err) {
+                Swal.fire("連線錯誤", "無法連線到資料庫，請檢查網路或部署狀態", "error");
             }).verifyMember(id, dob);
         }
 
@@ -270,8 +281,6 @@
                 currentEventId=null; goPage('home');
             }
         }
-        
-        // 渲染列表
         function renderReception() {
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
