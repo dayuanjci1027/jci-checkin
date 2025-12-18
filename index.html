@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCI 活動管理系統 V1.2 (大字體強化版)</title>
+    <title>JCI 活動管理系統 V1.3 (CSV修復+後鏡頭版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -143,7 +143,7 @@
         #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
 
-        /* --- ★★★ 輸出端 (Dashboard) V1.2 大改版 ★★★ --- */
+        /* --- ★★★ 輸出端 (Dashboard) V1.2 大字體版 ★★★ --- */
         #dashboard-grid {
             display: flex; flex-wrap: wrap; justify-content: flex-start; align-content: flex-start; gap: 20px;
             padding: 10px;
@@ -154,39 +154,29 @@
             background: white; padding: 20px; border-radius: 16px; text-align: center; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
             position: relative; overflow: hidden;
-            
-            /* ★★★ 寬度加大 ★★★ */
             width: 280px; 
             flex-grow: 1; 
             max-width: 350px; 
-            
             transition: 0.3s; 
-            border: 4px solid transparent; /* 預留邊框空間 */
+            border: 4px solid transparent;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
         .avatar { 
-            /* ★★★ 頭像稍微放大 ★★★ */
             width: 100px; height: 100px; border-radius: 50%; object-fit: cover; 
             margin-bottom: 15px; border: 4px solid #f0f2f5; 
         }
 
-        /* ★★★ 剛報到 (New) - 超顯眼特效 ★★★ */
+        /* 剛報到 (New) */
         .vip-card.new-arrival {
-            /* 紅橘色邊框 */
             border-color: #ff3d00; 
-            /* 亮黃色背景，與白色區隔 */
             background: #fff9c4;   
-            /* 強烈發光陰影 */
             box-shadow: 0 0 30px rgba(255, 61, 0, 0.5);
-            /* 呼吸燈動畫 */
             animation: distinctFlash 1.5s infinite alternate;
-            /* 稍微放大一點點，突顯地位但不擋人 */
             transform: scale(1.05);
             z-index: 10;
         }
 
-        /* 呼吸燈動畫 */
         @keyframes distinctFlash {
             0% { border-color: #ff3d00; box-shadow: 0 0 20px rgba(255, 61, 0, 0.4); }
             100% { border-color: #FFC107; box-shadow: 0 0 40px rgba(255, 193, 7, 0.8); }
@@ -272,7 +262,7 @@
         </div>
 
         <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:15px; margin-bottom:20px; overflow:hidden;">
-            <div id="reader"></div>
+            <div id="reader" style="width:100%"></div>
         </div>
         
         <div style="position:relative; margin-bottom:15px;">
@@ -311,7 +301,6 @@
             appId: "1:526526638146:web:c69e758e8b3c1d5990e5db",
             measurementId: "G-SDY39SN348"
         };
-        // ★ 請務必確認您的 GAS 網址 (如果重新部署過，請更新這裡)
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyT00r1ap5CkHkuyj3htQ0-AuU65CkidhsxWftaNjWe_9iPgKs6HlaLfqBDPqkV2dUDMQ/exec";
         // ==========================================
 
@@ -322,7 +311,9 @@
         let currentEventId = null;
         let guestsData = {};
         let allEvents = {};
-        let scanner = null;
+        
+        // ★★★ 改用 Html5Qrcode (核心庫) 而非 Scanner，才能強制控制鏡頭 ★★★
+        let html5QrCode = null; 
         let isScanning = false;
 
         // 初始化
@@ -411,23 +402,45 @@
             }).catch(()=> { btn.innerText="確認登入"; btn.disabled=false; Swal.fire("連線錯誤", "請檢查網路", "error"); });
         }
 
-        // P2. 輸入端 (原櫃台)
+        // ====================================================
+        // ★★★ 修改 2: 相機直接開啟後鏡頭 (無下拉選單) ★★★
+        // ====================================================
         function toggleCamera() { isScanning ? stopCamera() : startCamera(); }
+
         function startCamera() {
             document.getElementById('scanner-view').style.display = 'block';
             document.getElementById('btn-cam').innerText = "❌ 關閉相機";
             document.getElementById('btn-cam').style.background = "#333";
-            scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-            scanner.render(onScanSuccess);
+            
+            // 建立核心實體
+            html5QrCode = new Html5Qrcode("reader");
+
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            
+            // ★ 強制使用 environment (後鏡頭)
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+            .catch(err => {
+                console.error(err);
+                Swal.fire("無法啟動相機", "請確認權限或裝置是否支援", "error");
+                stopCamera();
+            });
+
             isScanning = true;
         }
+
         function stopCamera() {
-            if(scanner) { scanner.clear(); scanner = null; }
+            if(html5QrCode) { 
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear(); 
+                    html5QrCode = null; 
+                }).catch(err => console.log("Stop failed", err));
+            }
             document.getElementById('scanner-view').style.display = 'none';
             document.getElementById('btn-cam').innerText = "📷 掃描 QR Code";
             document.getElementById('btn-cam').style.background = "linear-gradient(45deg, #ff5722, #ff9800)";
             isScanning = false;
         }
+
         function onScanSuccess(uid) {
             if(guestsData[uid]) {
                 if(!guestsData[uid].arrived) {
@@ -473,13 +486,11 @@
             db.ref(`events_data/${currentEventId}/${id}`).update(updates);
         }
 
-        // ★★★ 修改: 輸出端 (Dashboard) 字體放大 + 顯眼提示 ★★★
         function renderDashboard() {
             const grid = document.getElementById('dashboard-grid');
             const emptyMsg = document.getElementById('empty-msg');
             grid.innerHTML = '';
             
-            // 1. 過濾 (邏輯不變)
             let list = Object.values(guestsData).filter(g => {
                 if (!g.arrived) return false;
                 if (g.group === 'External' || g.group === 'Official') return true;
@@ -495,7 +506,6 @@
                 emptyMsg.style.display = 'none';
             }
 
-            // 2. 排序
             list.sort((a, b) => {
                 const scoreA = (!a.acked) ? 2 : 1;
                 const scoreB = (!b.acked) ? 2 : 1;
@@ -503,11 +513,8 @@
                 return (b.timestamp || 0) - (a.timestamp || 0);
             });
 
-            // 3. 渲染
             list.forEach(g => {
                 const d = document.createElement('div');
-                
-                // 區分新舊 (只有邊框和背景色不同，不再放大尺寸)
                 let cardClass = 'vip-card';
                 if (!g.acked) {
                     cardClass += ' new-arrival'; 
@@ -517,7 +524,6 @@
                 d.onclick = function() { ackGuest(g.id); }; 
                 d.style.cursor = "pointer";
 
-                // ★★★ 這裡將 font-size 直接寫在 style 裡，確保 2 倍大 ★★★
                 d.innerHTML = `
                     <img src="${g.photo||defaultAvatar}" class="avatar">
                     <div style="font-weight:bold;margin-bottom:5px; font-size:2.5rem; line-height:1.2;">${g.name}</div>
@@ -583,7 +589,6 @@
             });
         }
 
-        // 資料同步與匯出
         function syncFromCloud() {
             if(!confirm("確定從 Google 雲端同步？\n(將匯入 Internal/All_Data 分頁名單)")) return;
             Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
@@ -595,54 +600,47 @@
                 db.ref(`events_data/${currentEventId}`).set(newData).then(() => Swal.fire("同步成功", `匯入 ${data.length} 筆`, "success"));
             }).catch(()=> Swal.fire("失敗", "檢查腳本部署", "error"));
         }
+
         // ==========================================
-// ★★★ 修改版 V3：匯出 CSV (檔名=活動名 / 未到留白 / 職稱單純化) ★★★
-// ==========================================
-function exportCSV() {
-    // 1. 取得活動名稱作為檔名
-    // 如果找不到名稱，就預設用 "簽到表"
-    let eventName = "簽到表";
-    if (currentEventId && allEvents[currentEventId]) {
-        eventName = allEvents[currentEventId].name;
-    }
-
-    // 2. 設定表頭
-    let csv = "\uFEFF系統ID,姓名,職稱,分類,簽到狀態,報到時間\n";
-
-    Object.values(guestsData).forEach(g => {
-        // 3. 處理狀態與時間 (未到者 -> 全部留白)
-        let statusStr = "";
-        let timeStr = "";
-
-        if (g.arrived) {
-            statusStr = "已到"; // 只有已到才顯示文字
-            
-            // 處理時間格式
-            if (g.timestamp) {
-                let d = new Date(g.timestamp);
-                const pad = (n) => (n < 10 ? '0' + n : n);
-                timeStr = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        // ★★★ 修改版 V1.3：匯出 CSV 修復 (移除ID、強制不換行) ★★★
+        // ==========================================
+        function exportCSV() {
+            let eventName = "簽到表";
+            if (currentEventId && allEvents[currentEventId]) {
+                eventName = allEvents[currentEventId].name;
             }
+
+            // 1. 定義清洗函式：把逗號(,)和換行(\n)都變成空白
+            const clean = (text) => {
+                if (!text) return "";
+                return String(text).replace(/,/g, ' ').replace(/\n/g, ' ').replace(/\r/g, '').trim();
+            };
+
+            // 2. 表頭：姓名,職稱,分類,簽到狀態,報到時間
+            let csv = "\uFEFF姓名,職稱,分類,簽到狀態,報到時間\n";
+
+            Object.values(guestsData).forEach(g => {
+                let statusStr = "";
+                let timeStr = "";
+
+                if (g.arrived) {
+                    statusStr = "已到";
+                    if (g.timestamp) {
+                        let d = new Date(g.timestamp);
+                        const pad = (n) => (n < 10 ? '0' + n : n);
+                        timeStr = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+                    }
+                }
+
+                // 3. 組合 (全部過 clean 函式)
+                csv += `${clean(g.name)},${clean(g.title)},${clean(g.group)},${statusStr},${timeStr}\n`;
+            });
+
+            const l = document.createElement("a");
+            l.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+            l.download = eventName + ".csv";
+            l.click();
         }
-        // 如果未到 (else)，statusStr 和 timeStr 保持為空字串 ""
-
-        // 4. 職稱處理 (直接取用 title，不加任何裝飾)
-        let cleanTitle = g.title || "";
-
-        // 5. 組合資料
-        // 注意：Excel 判斷空值就是兩個逗號 ,, 之間沒有東西
-        csv += `${g.id},${g.name},${cleanTitle},${g.group || ''},${statusStr},${timeStr}\n`;
-    });
-
-    // 6. 產生下載
-    const l = document.createElement("a");
-    l.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-    
-    // 設定檔名
-    l.download = eventName + ".csv";
-    
-    l.click();
-}
 
         function showSiteQR() {
             document.getElementById('site-qr-modal').style.display = 'flex';
