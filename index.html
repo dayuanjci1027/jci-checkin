@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCI 活動管理系統 V14.0 (完整版)</title>
+    <title>JCI 活動管理系統 V1.1 (輸出入端調整版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -43,7 +42,6 @@
             z-index: 100; 
             position: sticky; top: 0;
         }
-        /* 特殊樣式：會員掃碼進入時隱藏導航 */
         .hide-nav { display: none !important; }
 
         .nav-group { display: flex; gap: 5px; }
@@ -108,7 +106,6 @@
         }
         .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,151,215,0.4); }
 
-        /* 驗證成功後的卡片 */
         #pass-area { 
             display: none; margin-top: 20px; 
             border: 2px dashed #0097D7; padding: 20px; border-radius: 15px; background: #f0f9ff;
@@ -123,11 +120,17 @@
         }
         .event-card.active { background: #e3f2fd; border-color: var(--jci-blue); }
 
+        /* 輸入端列表樣式 */
         .guest-item {
             background: white; padding: 15px; border-bottom: 1px solid #eee; 
             display: flex; justify-content: space-between; align-items: center;
         }
         .guest-item.arrived { background: #f9f9f9; }
+        /* 輸入端照片樣式 */
+        .guest-photo-small {
+            width: 45px; height: 45px; border-radius: 50%; object-fit: cover;
+            border: 2px solid #eee; margin-right: 12px;
+        }
 
         /* 浮動按鈕 */
         .fab { 
@@ -137,55 +140,46 @@
             box-shadow: 0 4px 20px rgba(0,151,215,0.4); cursor: pointer; z-index: 200; transition: 0.3s; 
         }
 
-        /* 掃描相關 */
         #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
 
-        /* --- ★★★ 牆面(Dashboard) 特效區 ★★★ --- */
+        /* --- ★★★ 輸出端 (Dashboard) 修改版 ★★★ --- */
         #dashboard-grid {
-            display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; gap: 20px;
+            display: flex; flex-wrap: wrap; justify-content: flex-start; align-content: flex-start; gap: 15px;
+            padding: 10px;
         }
 
+        /* 統一卡片樣式 (不分大小，只分顏色) */
         .vip-card { 
-            background: white; padding: 20px; border-radius: 16px; text-align: center; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden;
-            transition: 0.3s; border: 2px solid transparent;
+            background: white; padding: 15px; border-radius: 12px; text-align: center; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+            position: relative; overflow: hidden;
+            width: 180px; /* 固定寬度，讓它自動換行 */
+            flex-grow: 1; /* 允許稍微撐開填滿 */
+            max-width: 220px; /* 限制最大寬度 */
+            transition: 0.3s; 
+            border: 3px solid transparent; /* 預留邊框位置 */
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
+
         .avatar { 
-            width: 80px; height: 80px; border-radius: 50%; object-fit: cover; 
-            margin-bottom: 15px; border: 3px solid #f0f2f5; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            width: 70px; height: 70px; border-radius: 50%; object-fit: cover; 
+            margin-bottom: 10px; border: 3px solid #f0f2f5; 
         }
 
-        /* 1. 剛報到 (亮燈狀態)：巨大、發光、置中 */
-        .vip-card.active-light {
-            position: fixed;
-            top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1.5);
-            z-index: 999;
-            width: 400px;
-            border: 5px solid #FFC107;
-            background: #fff;
-            box-shadow: 0 0 100px rgba(255, 193, 7, 1);
-            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        /* 剛報到 (New) - 只改變邊框顏色，不放大 */
+        .vip-card.new-arrival {
+            border-color: #FFC107; /* 黃色邊框 */
+            background: #fffceb;   /* 淡淡黃底 */
+            animation: pulseBorder 2s infinite;
         }
 
-        /* 2. 已消燈 (已閱狀態)：變小、變暗、排排站 */
-        .vip-card.acked-card {
-            width: 200px;
-            opacity: 0.8;
-            background: rgba(255, 255, 255, 0.9);
-            border: 2px solid var(--jci-blue);
+        @keyframes pulseBorder {
+            0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
         }
 
-        @keyframes popIn {
-            0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
-        }
-
-        @keyframes blink {
-            0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; }
-        }
-
-        /* SweetAlert2 自定義樣式調整 */
         .swal2-input { font-size: 1rem !important; }
 
     </style>
@@ -198,8 +192,8 @@
         </div>
         <div class="nav-group">
             <div class="nav-item" onclick="goPage('member')">會員</div>
-            <div class="nav-item" onclick="goPage('reception')">櫃台</div>
-            <div class="nav-item" onclick="goPage('dashboard')">牆面</div>
+            <div class="nav-item" onclick="goPage('reception')">輸入端</div>
+            <div class="nav-item" onclick="goPage('dashboard')">輸出端</div>
         </div>
     </div>
 
@@ -253,7 +247,7 @@
     </div>
 
     <div id="page-reception" class="page">
-        <h2 style="margin-bottom:20px;">報到處控制台</h2>
+        <h2 style="margin-bottom:20px;">輸入端 (原櫃台)</h2>
         
         <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px;" onclick="toggleCamera()">📷 掃描 QR Code</button>
         
@@ -275,8 +269,9 @@
         <div id="reception-list"></div>
     </div>
 
-    <div id="page-dashboard" class="page" style="background-color: #111; min-height: 100vh;">
-        <div id="empty-msg" style="color:#555; text-align:center; margin-top:20%; font-size:2rem; display:none;">
+    <div id="page-dashboard" class="page" style="background-color: #222; min-height: 100vh;">
+        <h2 style="color:white; margin:0 0 20px 10px;">輸出端 (貴賓牆)</h2>
+        <div id="empty-msg" style="color:#777; text-align:center; margin-top:20%; font-size:1.5rem; display:none;">
             等待貴賓蒞臨...
         </div>
         <div id="dashboard-grid"></div>
@@ -321,7 +316,6 @@
         // 初始化
         db.ref('events_meta').on('value', snap => { allEvents = snap.val() || {}; renderEventList(); });
 
-        // ★★★ 檢查網址參數，如果是會員模式 (?mode=entry)，強制鎖定介面 ★★★
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('mode') === 'entry') {
@@ -405,7 +399,7 @@
             }).catch(()=> { btn.innerText="確認登入"; btn.disabled=false; Swal.fire("連線錯誤", "請檢查網路", "error"); });
         }
 
-        // P2. 櫃台接待
+        // P2. 輸入端 (原櫃台)
         function toggleCamera() { isScanning ? stopCamera() : startCamera(); }
         function startCamera() {
             document.getElementById('scanner-view').style.display = 'block';
@@ -430,20 +424,36 @@
                 } else { Swal.fire("重複", "已入場", "warning"); }
             } else { Swal.fire("錯誤", "非本場名單", "error"); }
         }
+
+        // ★★★ 修改 2: 輸入端列表加入照片 ★★★
         function renderReception() {
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
             list.innerHTML = '';
+            
             Object.values(guestsData).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).forEach(g => {
                 if(search && g.name.indexOf(search) === -1) return;
+                
                 const d = document.createElement('div');
                 d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
-                d.innerHTML = `<div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div><button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>`;
+                
+                // 加入照片並使用 Flex 排版
+                d.innerHTML = `
+                    <div style="display:flex; align-items:center;">
+                        <img src="${g.photo || defaultAvatar}" class="guest-photo-small">
+                        <div>
+                            <div style="font-weight:bold; font-size:1.1rem;">${g.name}</div>
+                            <div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div>
+                        </div>
+                    </div>
+                    <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">
+                        ${g.arrived?'取消':'簽到'}
+                    </button>
+                `;
                 list.appendChild(d);
             });
         }
         
-        // ★★★ 核心報到函式 (加入 acked: false 觸發亮燈) ★★★
         function checkIn(id, status) {
             const updates = {
                 arrived: status,
@@ -453,26 +463,19 @@
             db.ref(`events_data/${currentEventId}/${id}`).update(updates);
         }
 
-        // P3. 牆面顯示 (Dashboard)
+        // ★★★ 修改 3: 輸出端移除彈出，改為單純格狀排列 ★★★
         function renderDashboard() {
             const grid = document.getElementById('dashboard-grid');
             const emptyMsg = document.getElementById('empty-msg');
             grid.innerHTML = '';
             
-            // 1. 過濾 & 轉換
+            // 1. 過濾 (邏輯不變)
             let list = Object.values(guestsData).filter(g => {
-                // 如果是未到，完全不顯示
                 if (!g.arrived) return false;
-
-                // 規則：External 或 Official -> 顯示
                 if (g.group === 'External' || g.group === 'Official') return true;
-                
-                // 規則：Internal -> 檢查 Title 是否含 會長 或 主席
                 if ((g.group === 'Internal' || g.group === 'internal') && g.title) {
-                     if (g.title.indexOf('會長') > -1 || g.title.indexOf('主席') > -1) return true;
+                      if (g.title.indexOf('會長') > -1 || g.title.indexOf('主席') > -1) return true;
                 }
-                
-                // 其他 (一般 Member) -> 不顯示
                 return false;
             });
 
@@ -482,7 +485,7 @@
                 emptyMsg.style.display = 'none';
             }
 
-            // 2. 排序：未讀(亮燈)優先 > 時間倒序
+            // 2. 排序：未讀在前，時間倒序在後
             list.sort((a, b) => {
                 const scoreA = (!a.acked) ? 2 : 1;
                 const scoreB = (!b.acked) ? 2 : 1;
@@ -490,42 +493,34 @@
                 return (b.timestamp || 0) - (a.timestamp || 0);
             });
 
-            // 3. 渲染
+            // 3. 渲染 - 統一使用小卡樣式
             list.forEach(g => {
                 const d = document.createElement('div');
-                let customClass = '';
-
+                
+                // 判斷是否為「剛報到 (未讀)」，給予不同 Class，但排版邏輯一致
+                let cardClass = 'vip-card';
                 if (!g.acked) {
-                    customClass = 'vip-card active-light'; // 亮燈特效
-                    d.onclick = function() { ackGuest(g.id); }; // 點擊消燈
-                    d.style.cursor = "pointer";
-                    // 亮燈時顯示大字
-                    d.innerHTML = `
-                        <img src="${g.photo||defaultAvatar}" class="avatar">
-                        <div style="font-weight:bold;margin-bottom:5px;font-size:2.5rem;">${g.name}</div>
-                        <div style="font-size:1.5rem;color:#666">${g.title}</div>
-                        <div style="font-size:1.2rem;background:#eee;display:inline-block;padding:5px 15px;border-radius:10px;margin-top:10px;">${g.group}</div>
-                        <div style="color:#d32f2f;font-weight:bold;margin-top:15px;animation:blink 1s infinite;font-size:1.5rem;">🔥 剛報到 🔥</div>
-                        <div style="font-size:0.9rem;color:#888;margin-top:20px;">(點擊畫面消燈)</div>
-                    `;
-                } else {
-                    customClass = 'vip-card acked-card'; // 已閱樣式
-                    // 已閱時顯示小字
-                    d.innerHTML = `
-                        <img src="${g.photo||defaultAvatar}" class="avatar" style="width:60px;height:60px;">
-                        <div style="font-weight:bold;margin-bottom:5px;font-size:1.2rem;">${g.name}</div>
-                        <div style="font-size:0.9rem;color:#666">${g.title}</div>
-                    `;
+                    cardClass += ' new-arrival'; // 加上閃爍邊框
                 }
-                d.className = customClass;
+
+                d.className = cardClass;
+                d.onclick = function() { ackGuest(g.id); }; // 點擊可消除閃爍狀態
+                d.style.cursor = "pointer";
+
+                d.innerHTML = `
+                    <img src="${g.photo||defaultAvatar}" class="avatar">
+                    <div style="font-weight:bold;margin-bottom:5px;font-size:1.1rem;">${g.name}</div>
+                    <div style="font-size:0.9rem;color:#666">${g.title}</div>
+                `;
                 grid.appendChild(d);
             });
         }
+
         function ackGuest(id) {
             db.ref(`events_data/${currentEventId}/${id}`).update({ acked: true });
         }
 
-        // ★★★ 新增現場來賓功能 ★★★
+        // 新增現場來賓
         function addNewGuest() {
             Swal.fire({
                 title: '新增現場來賓',
@@ -536,7 +531,7 @@
                     <div style="text-align:left; font-size:0.9rem; color:#666; margin-bottom:5px;">職稱</div>
                     <input id="swal-title" class="swal2-input" placeholder="例如：會長、局長" style="margin:0 0 15px 0; width:80%;">
                     
-                    <div style="text-align:left; font-size:0.9rem; color:#666; margin-bottom:5px;">分類 (決定牆面是否顯示)</div>
+                    <div style="text-align:left; font-size:0.9rem; color:#666; margin-bottom:5px;">分類 (決定輸出端是否顯示)</div>
                     <select id="swal-group" class="swal2-input" style="margin:0; width:80%;">
                         <option value="External">友會貴賓 (External)</option>
                         <option value="Official">長官/來賓 (Official)</option>
@@ -570,7 +565,7 @@
                         photo: "",
                         arrived: true,
                         timestamp: firebase.database.ServerValue.TIMESTAMP,
-                        acked: false // 未讀 -> 亮燈
+                        acked: false 
                     });
 
                     Swal.fire({ icon: 'success', title: '新增成功', text: `${data.name} 已完成報到`, timer: 1500, showConfirmButton: false });
