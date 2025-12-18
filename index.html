@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCI 活動管理系統 V22.0 (最終版)</title>
+    <title>JCI 活動管理系統 V24 (No-Hallucination)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -24,12 +24,13 @@
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Login & Card Styles */
+        /* Login */
         .login-bg { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
         .login-card { background: white; width: 100%; max-width: 380px; padding: 40px; border-radius: 24px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.08); position: relative; overflow: hidden; }
         .login-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: var(--bg-gradient); }
         .styled-input { width: 100%; padding: 14px 16px; margin-bottom: 15px; border: 2px solid #eee; border-radius: 12px; font-size: 1rem; box-sizing: border-box; background: #f9f9f9; }
         
+        /* Dashboard */
         #dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 25px; padding-bottom: 50px; }
         .vip-card { background: white; border-radius: 20px; padding: 25px; text-align: center; border: 4px solid transparent; transition: 0.4s; cursor: pointer; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
         .vip-card.active-light { border-color: #FFD700; background: #fffbef; box-shadow: 0 0 30px rgba(255, 215, 0, 0.6); z-index: 10; transform: translateY(-5px); }
@@ -115,6 +116,7 @@
     </div>
 
     <script>
+        // 設定區
         const firebaseConfig = {
             apiKey: "AIzaSyDLq7SrkQaCnjtsFArh0leKPJRbPFZTZnk",
             authDomain: "checkin2025-f0bb9.firebaseapp.com",
@@ -133,14 +135,12 @@
         let guestsData = {};
         let html5QrCode = null;
 
-        // LH3 圖片處理 (強制補全網址)
-        function getLH3(id) {
-            if (!id || id.trim() === "") return defaultAvatar;
-            if (id.includes("http")) return id; 
-            return "https://lh3.googleusercontent.com/d/" + id;
+        // 圖片顯示邏輯 (前端不再組裝網址，直接用後端給的)
+        function getLH3(url) {
+            return (url && url.length > 5) ? url : defaultAvatar;
         }
 
-        // 頁面控制
+        // 頁面監聽
         db.ref('events_meta').on('value', snap => {
             const list = document.getElementById('event-list');
             list.innerHTML = '';
@@ -173,11 +173,11 @@
             goPage('reception');
         }
 
-        // QR Code 顯示
+        // 顯示 QR Code (自動抓取當前 GAS 網址，不用你手填!)
         function showSiteQR() {
             document.getElementById('site-qr-modal').style.display = 'flex';
             document.getElementById('site-qr-target').innerHTML = '';
-            // 抓取目前的 GAS 執行網址 (Script App Url)
+            // ★自動抓取當前網址★
             const url = window.location.href.split('?')[0] + "?mode=entry";
             new QRCode(document.getElementById('site-qr-target'), { text: url, width: 250, height: 250 });
         }
@@ -190,7 +190,7 @@
             }
         };
 
-        // ★★★ 同步功能：使用 google.script.run ★★★
+        // ★ 同步功能 (Google Script Run) ★
         function syncFromCloud() {
             if (!currentEventId) return Swal.fire("錯誤", "請先選擇活動", "error");
             Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
@@ -215,8 +215,28 @@
                     Swal.fire("錯誤", "資料解析失敗: " + e, "error");
                 }
             }).withFailureHandler(function(err) {
-                Swal.fire("同步失敗", "請檢查 GAS: " + err, "error");
+                Swal.fire("同步失敗", "請檢查 GAS 權限: " + err, "error");
             }).getMemberData();
+        }
+
+        // ★ 會員驗證 (Google Script Run) ★
+        function verifyWithGoogle() {
+            const id = document.getElementById('login-id').value;
+            const dob = document.getElementById('login-dob').value;
+            
+            google.script.run.withSuccessHandler(function(jsonString) {
+                const d = JSON.parse(jsonString);
+                if(d.status==='success') {
+                    document.getElementById('login-form').style.display='none';
+                    document.querySelector('.login-subtitle').style.display='none';
+                    document.getElementById('pass-area').style.display='block';
+                    document.getElementById('pass-name').innerText=d.name;
+                    document.getElementById('pass-title').innerText=d.title;
+                    document.getElementById('pass-photo').src=getLH3(d.photo);
+                    document.getElementById('qrcode').innerHTML='';
+                    new QRCode(document.getElementById('qrcode'), {text:d.uid, width:150, height:150, colorDark : "#005780"});
+                } else Swal.fire("失敗", "資料錯誤", "error");
+            }).verifyMember(id, dob);
         }
 
         // 其他功能
@@ -250,8 +270,8 @@
                 currentEventId=null; goPage('home');
             }
         }
-
-        // 列表渲染
+        
+        // 渲染列表
         function renderReception() {
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
@@ -259,6 +279,7 @@
             Object.values(guestsData).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).forEach(g => {
                 if(search && !(g.name.includes(search)||g.title.includes(search))) return;
                 const d = document.createElement('div');
+                d.className = 'guest-item'; 
                 d.style = "background:white; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #eee;";
                 d.innerHTML = `
                     <div style="display:flex;align-items:center;">
@@ -290,24 +311,6 @@
             const v = document.getElementById('scanner-view');
             if(v.style.display==='block') { if(html5QrCode) html5QrCode.stop(); v.style.display='none'; }
             else { v.style.display='block'; html5QrCode=new Html5Qrcode("reader"); html5QrCode.start({facingMode:"environment"}, {fps:10, qrbox:250}, (txt)=>{ if(guestsData[txt]) checkIn(txt,true); }); }
-        }
-        
-        // ★★★ 登入驗證：使用 google.script.run ★★★
-        function verifyWithGoogle() {
-            const id = document.getElementById('login-id').value;
-            const dob = document.getElementById('login-dob').value;
-            google.script.run.withSuccessHandler(function(jsonString) {
-                const d = JSON.parse(jsonString);
-                if(d.status==='success') {
-                    document.getElementById('login-form').style.display='none';
-                    document.getElementById('pass-area').style.display='block';
-                    document.getElementById('pass-name').innerText=d.name;
-                    document.getElementById('pass-title').innerText=d.title;
-                    document.getElementById('pass-photo').src=d.photo;
-                    document.getElementById('qrcode').innerHTML='';
-                    new QRCode(document.getElementById('qrcode'), {text:d.uid, width:150, height:150});
-                } else Swal.fire("失敗", "資料錯誤", "error");
-            }).verifyMember(id, dob);
         }
     </script>
 </body>
