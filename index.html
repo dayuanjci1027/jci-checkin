@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCI 活動管理系統 V16.0 (精確修正版)</title>
+    <title>JCI 活動管理系統 V14 (經典還原)</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -13,165 +13,102 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
-        :root { 
-            --jci-blue: #0097D7;
-            --jci-dark: #005780;
-            --accent: #FFC107; 
-            --bg-gradient: linear-gradient(135deg, #0097D7 0%, #005780 100%);
-        }
+        :root { --jci-blue: #0097D7; --jci-dark: #005780; --bg-gradient: linear-gradient(135deg, #0097D7 0%, #005780 100%); }
+        body { font-family: 'Noto Sans TC', sans-serif; margin: 0; background: #f4f6f9; display: flex; flex-direction: column; height: 100vh; color: #333; }
         
-        body { 
-            font-family: 'Noto Sans TC', sans-serif; 
-            margin: 0; background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; 
-        }
+        #nav-bar { background: rgba(255,255,255,0.95); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top:0; z-index:100;}
+        .nav-item { cursor: pointer; padding: 8px 16px; border-radius: 50px; color: #666; font-weight: 500; transition: 0.3s; }
+        .nav-item.active { background: var(--jci-blue); color: white; }
 
-        /* --- 頂部導航 --- */
-        #nav-bar { 
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
-            padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05); z-index: 100; position: sticky; top: 0;
-        }
-        .hide-nav { display: none !important; }
-        .nav-group { display: flex; gap: 5px; }
-        .nav-item { 
-            cursor: pointer; color: #666; font-weight: 500; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; transition: all 0.3s ease; 
-        }
-        .nav-item.active { background: var(--jci-blue); color: white; box-shadow: 0 2px 10px rgba(0,151,215,0.3); }
-        .event-badge { background: #333; color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-
-        .page { display: none; flex: 1; overflow-y: auto; padding: 20px; animation: fadeIn 0.4s ease-out; }
+        .page { display: none; flex: 1; overflow-y: auto; padding: 20px; }
         .page.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- 登入頁 --- */
-        .login-bg { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
-        .login-card { background: white; width: 100%; max-width: 380px; padding: 40px; border-radius: 24px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
-        .login-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: var(--bg-gradient); }
-        .login-title { font-size: 1.8rem; font-weight: 700; color: #333; margin-bottom: 5px; }
-        .input-group { text-align: left; margin-bottom: 20px; }
-        .styled-input { width: 100%; padding: 14px 16px; border: 2px solid #eee; border-radius: 12px; font-size: 1rem; transition: 0.3s; box-sizing: border-box; }
-        .styled-input:focus { border-color: var(--jci-blue); outline: none; background: #f9fcff; }
-        .btn-gradient { width: 100%; padding: 16px; background: var(--bg-gradient); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.3s; margin-top: 10px; box-shadow: 0 5px 15px rgba(0,151,215,0.3); }
-        #pass-area { display: none; margin-top: 20px; border: 2px dashed #0097D7; padding: 20px; border-radius: 15px; background: #f0f9ff; }
-
-        /* --- 輸入端 --- */
-        .event-card { background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; cursor: pointer; transition: 0.2s; }
-        .event-card.active { background: #e3f2fd; border-color: var(--jci-blue); }
+        /* Login */
+        .login-card { background: white; width: 100%; max-width: 380px; padding: 40px; margin: 40px auto; border-radius: 24px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .styled-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; background: #f9f9f9; }
         
-        /* 修正 1: 輸入端名單加入照片樣式 */
-        .guest-item { background: white; padding: 12px 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .guest-item.arrived { background: #f9f9f9; }
-        .guest-avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; margin-right: 12px; border: 1px solid #ddd; }
-        .guest-info { display: flex; align-items: center; flex: 1; }
+        /* Dashboard */
+        #dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+        .vip-card { background: white; border-radius: 20px; padding: 20px; text-align: center; border: 4px solid transparent; transition: 0.3s; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .vip-card.active-light { border-color: #FFD700; background: #fffbef; box-shadow: 0 0 25px rgba(255, 215, 0, 0.6); z-index: 10; transform: translateY(-5px); }
+        .vip-card.acked-card { opacity: 0.6; filter: grayscale(80%); }
+        .vip-card img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; border: 2px solid #eee; }
 
-        .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--jci-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 4px 20px rgba(0,151,215,0.4); cursor: pointer; z-index: 200; transition: 0.3s; }
-        #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
-        #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
+        /* Buttons */
+        .btn-gradient { padding: 12px 20px; background: var(--bg-gradient); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; width: 100%; box-shadow: 0 5px 15px rgba(0,151,215,0.3); }
+        .btn-tool { padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: 600; display: flex; align-items: center; gap: 5px; }
 
-        /* --- 輸出端 (Dashboard) --- */
-        #dashboard-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* 響應式：隨螢幕寬度自動增減卡片數量 */
-            gap: 20px; 
-            padding: 20px;
-        }
-        
-        /* 修正 2: 卡片發亮特效 (不變大，純發亮，擴大點擊範圍) */
-        .vip-card { 
-            background: white; border-radius: 16px; text-align: center; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden;
-            transition: all 0.3s ease;
-            border: 4px solid transparent; 
-            padding: 20px; /* 加大點擊範圍 */
-            cursor: pointer;
-        }
-        
-        /* 選取範圍包含外框：點擊外框即可變暗/發亮 */
-        .vip-card::after { content: ''; position: absolute; top:0; left:0; right:0; bottom:0; }
-
-        .vip-card .avatar { 
-            width: 100px; height: 100px; border-radius: 50%; object-fit: cover; 
-            margin: 0 auto 15px; border: 3px solid #f0f2f5; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        /* 亮燈特效：純發亮，不彈出 */
-        .vip-card.active-light {
-            background: #fff;
-            border-color: #FFC107; 
-            box-shadow: 0 0 30px rgba(255, 193, 7, 0.9); 
-            z-index: 5;
-        }
-
-        .vip-card.acked-card { opacity: 0.9; border: 2px solid var(--jci-blue); }
-        
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        .swal2-input { font-size: 1rem !important; }
+        #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
+        #site-qr-box { background: white; padding: 30px; border-radius: 20px; text-align: center; }
     </style>
 </head>
 <body>
 
     <div id="nav-bar">
-        <div class="event-badge" onclick="goPage('home')" id="current-event-display"><span>🏠</span> 尚未選擇活動</div>
-        <div class="nav-group">
+        <div onclick="goPage('home')" style="cursor:pointer; font-weight:700;">🏠 活動大廳</div>
+        <div style="display:flex; gap:10px;">
             <div class="nav-item" onclick="goPage('member')">會員</div>
-            <div class="nav-item" onclick="goPage('reception')">輸入端</div> 
-            <div class="nav-item" onclick="goPage('dashboard')">輸出端</div> 
+            <div class="nav-item" onclick="goPage('reception')">輸入端</div>
+            <div class="nav-item" onclick="goPage('dashboard')">輸出端</div>
         </div>
     </div>
 
     <div id="page-home" class="page active">
-        <h2 style="color:#333; margin: 10px 0 20px;">📅 活動列表</h2>
+        <h2 style="color:#333;">📅 活動列表</h2>
         <div id="event-list">載入中...</div>
-        <div class="fab" onclick="createNewEvent()">+</div>
-        <div style="text-align:center; margin-top:40px;">
-            <button onclick="showSiteQR()" style="background:white; border:1px solid #ddd; padding:10px 20px; border-radius:30px; cursor:pointer; font-weight:bold; color:#555; box-shadow:0 2px 5px rgba(0,0,0,0.05);">📱 顯示入場掃描用 QR Code</button>
+        <div style="margin-top:20px; display:flex; gap:10px;">
+            <button class="btn-gradient" style="width:auto;" onclick="createNewEvent()">+ 建立活動</button>
+            <button class="btn-gradient" style="width:auto; background:#fff; color:#333; border:1px solid #ccc;" onclick="showSiteQR()">📱 顯示入場 QR</button>
         </div>
     </div>
 
     <div id="page-member" class="page">
-        <div class="login-bg">
-            <div class="login-card">
-                <div style="font-size:3rem; margin-bottom:10px;">🆔</div>
-                <div class="login-title">會員報到系統</div>
-                <div id="login-form">
-                    <div class="input-group"><label class="input-label">身分證字號</label><input type="text" id="login-id" class="styled-input" placeholder="例如：A123456789"></div>
-                    <div class="input-group"><label class="input-label">出生年月日</label><input type="text" id="login-dob" class="styled-input" placeholder="例如：19920105"></div>
-                    <button id="btn-verify" class="btn-gradient" onclick="verifyWithGoogle()">確認登入</button>
-                </div>
-                <div id="pass-area">
-                    <img id="pass-photo" class="avatar" style="width:100px; height:100px; border-radius:50%; object-fit:cover;" src="">
-                    <div id="pass-name" style="font-weight:bold; color:var(--jci-dark); font-size:1.5rem; margin-bottom:5px;"></div>
-                    <div id="pass-title" style="color:#888; font-size:0.9rem; margin-bottom:15px;"></div>
-                    <div id="qrcode" style="display:inline-block; border: 8px solid white; box-shadow: 0 5px 20px rgba(0,0,0,0.1); border-radius: 10px;"></div>
-                </div>
+        <div class="login-card">
+            <h2 style="color:var(--jci-blue);">會員登入</h2>
+            <div id="login-form">
+                <input type="text" id="login-id" class="styled-input" placeholder="身分證字號">
+                <input type="text" id="login-dob" class="styled-input" placeholder="生日 (例如: 19920105)">
+                <button class="btn-gradient" onclick="verifyWithGoogle()">確認登入</button>
+            </div>
+            <div id="pass-area" style="display:none; margin-top:20px;">
+                <img id="pass-photo" style="width:100px; height:100px; border-radius:50%; margin-bottom:10px; border:3px solid var(--jci-blue);">
+                <h2 id="pass-name" style="margin:5px 0;"></h2>
+                <div id="pass-title" style="color:#666; margin-bottom:15px;"></div>
+                <div style="background:#fff; padding:10px; display:inline-block; border:1px solid #eee;"><div id="qrcode"></div></div>
+                <button onclick="location.reload()" style="display:block; margin:20px auto; background:none; border:none; text-decoration:underline; color:#999; cursor:pointer;">重新登入</button>
             </div>
         </div>
     </div>
 
     <div id="page-reception" class="page">
-        <h2 style="margin-bottom:20px;">輸入端 (報到櫃台)</h2>
-        <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px;" onclick="toggleCamera()">📷 掃描 QR Code</button>
-        <div style="background:white; padding:15px; border-radius:10px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; border:1px solid #eee;">
-            <button onclick="addNewGuest()" style="background:var(--jci-blue); color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1;">➕ 新增現場來賓</button>
-            <button onclick="syncFromCloud()" style="background:#007bff; color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold;">☁️ 同步名單</button>
+        <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+            <button class="btn-tool" style="background:orange;" onclick="toggleCamera()">📷 掃描</button>
+            <button class="btn-tool" style="background:var(--jci-blue);" onclick="addNewGuest()">➕ 來賓</button>
+            <button class="btn-tool" style="background:#007bff;" onclick="syncFromCloud()">☁️ 同步</button>
+            <button class="btn-tool" style="background:#28a745;" onclick="exportCSV()">📥 匯出</button>
+            <button class="btn-tool" style="background:#dc3545; margin-left:auto;" onclick="deleteCurrentEvent()">🗑️ 刪除</button>
         </div>
-        <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:15px; margin-bottom:20px; overflow:hidden;"><div id="reader"></div></div>
-        <div style="position:relative; margin-bottom:15px;"><input type="text" id="search-box" placeholder="🔍 搜尋名單..." class="styled-input" onkeyup="renderReception()"></div>
+        <div id="scanner-view" style="display:none; margin-bottom:15px; background:#000; border-radius:15px; overflow:hidden;"><div id="reader"></div></div>
+        <input type="text" id="search-box" class="styled-input" placeholder="🔍 搜尋姓名..." onkeyup="renderReception()" style="background:white;">
         <div id="reception-list"></div>
     </div>
 
-    <div id="page-dashboard" class="page" style="background-color: #111; min-height: 100vh;">
+    <div id="page-dashboard" class="page" style="background:#111; min-height:100vh;">
         <div id="dashboard-grid"></div>
     </div>
 
     <div id="site-qr-modal" onclick="this.style.display='none'">
         <div id="site-qr-box" onclick="event.stopPropagation()">
-            <h2 style="margin:0 0 10px 0; color:var(--jci-blue);">會員掃碼入場</h2>
-            <div id="site-qrcode" style="margin:20px;"></div>
+            <h2 style="color:var(--jci-blue);">會員入場掃碼</h2>
+            <div id="site-qr-target" style="margin:20px auto;"></div>
         </div>
     </div>
 
     <script>
+        // ★★★★★ 請在這裡貼上你部署後的 GAS 網址 (結尾是 /exec) ★★★★★
+        // 這是 V14 版本最關鍵的一步，貼上就不會錯
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyT00r1ap5CkHkuyj3htQ0-AuU65CkidhsxWftaNjWe_9iPgKs6HlaLfqBDPqkV2dUDMQ/exec"; 
+
         const firebaseConfig = {
             apiKey: "AIzaSyDLq7SrkQaCnjtsFArh0leKPJRbPFZTZnk",
             authDomain: "checkin2025-f0bb9.firebaseapp.com",
@@ -181,152 +118,46 @@
             messagingSenderId: "526526638146",
             appId: "1:526526638146:web:c69e758e8b3c1d5990e5db"
         };
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyT00r1ap5CkHkuyj3htQ0-AuU65CkidhsxWftaNjWe_9iPgKs6HlaLfqBDPqkV2dUDMQ/exec";
-
+        
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/847/847969.png";
         
         let currentEventId = null;
         let guestsData = {};
-        let allEvents = {};
-        let html5QrCode = null; // 修正 3: 改用 Html5Qrcode 對象以精確控制鏡頭
+        let html5QrCode = null;
 
-        db.ref('events_meta').on('value', snap => { allEvents = snap.val() || {}; renderEventList(); });
+        // LH3 連結處理 (前端顯示用)
+        function getLH3(id) {
+            if (!id) return defaultAvatar;
+            return id.includes("http") ? id : "https://lh3.googleusercontent.com/d/" + id;
+        }
+
+        // 頁面控制
+        db.ref('events_meta').on('value', snap => {
+            const list = document.getElementById('event-list');
+            list.innerHTML = '';
+            const data = snap.val() || {};
+            Object.values(data).sort((a,b)=>b.created-a.created).forEach(evt => {
+                const div = document.createElement('div');
+                div.style = "background:white; padding:15px; border-radius:10px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;";
+                div.innerHTML = `<div><b>${evt.name}</b></div><button class="btn-tool" style="background:var(--jci-blue);" onclick="selectEvent('${evt.id}','${evt.name}')">進入</button>`;
+                list.appendChild(div);
+            });
+        });
 
         function goPage(p) {
-            if (!currentEventId && p !== 'home' && p !== 'member') return Swal.fire("請先在活動大廳選擇一個活動");
             document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
             document.getElementById('page-' + p).classList.add('active');
             document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
-            const navMap = {'member':0, 'reception':1, 'dashboard':2};
-            if(navMap[p] !== undefined) document.querySelectorAll('.nav-item')[navMap[p]].classList.add('active');
-            if(p !== 'reception') stopCamera();
-        }
-
-        // 修正 4: 直接啟動後鏡頭，不顯示切換介面
-        function toggleCamera() { 
-            const readerDiv = document.getElementById('scanner-view');
-            if (readerDiv.style.display === 'block') {
-                stopCamera();
-            } else {
-                readerDiv.style.display = 'block';
-                document.getElementById('btn-cam').innerText = "❌ 關閉相機";
-                html5QrCode = new Html5Qrcode("reader");
-                html5QrCode.start(
-                    { facingMode: "environment" }, // 強制後鏡頭
-                    { fps: 10, qrbox: 250 },
-                    onScanSuccess
-                ).catch(err => {
-                    Swal.fire("錯誤", "無法啟動後鏡頭", "error");
-                    stopCamera();
-                });
-            }
-        }
-
-        function stopCamera() {
-            if (html5QrCode) {
-                html5QrCode.stop().then(() => {
-                    html5QrCode = null;
-                    document.getElementById('scanner-view').style.display = 'none';
-                    document.getElementById('btn-cam').innerText = "📷 掃描 QR Code";
-                }).catch(() => {});
-            }
-        }
-
-        function onScanSuccess(uid) {
-            if(guestsData[uid]) {
-                if(!guestsData[uid].arrived) {
-                    checkIn(uid, true);
-                    Swal.fire({ icon: 'success', title: guestsData[uid].name, text: '簽到成功', timer: 1000, showConfirmButton: false });
-                } else { Swal.fire("重複", "已入場", "warning"); }
-            } else { Swal.fire("錯誤", "非本場名單", "error"); }
-        }
-
-        // 修正 5: 同步名單時將照片 ID 轉為 LH3 連結
-        function syncFromCloud() {
-            if(!confirm("確定從 Google 雲端同步？")) return;
-            Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
-            fetch(`${GOOGLE_SCRIPT_URL}?op=get_all`).then(r => r.json()).then(data => {
-                const newData = {};
-                data.forEach(row => { 
-                    // 這裡執行 LH3 轉換
-                    let photoUrl = row.photo ? "https://lh3.googleusercontent.com/d/" + row.photo : defaultAvatar;
-                    newData[row.id] = { id: row.id, name: row.name, title: row.title, group: row.group, photo: photoUrl, arrived: false, timestamp: 0 }; 
-                });
-                db.ref(`events_data/${currentEventId}`).set(newData).then(() => Swal.fire("同步成功", `匯入 ${data.length} 筆`, "success"));
-            });
-        }
-
-        // 修正 6: 輸入端名單顯示照片
-        function renderReception() {
-            const list = document.getElementById('reception-list');
-            const search = document.getElementById('search-box').value.toUpperCase();
-            list.innerHTML = '';
-            Object.values(guestsData).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).forEach(g => {
-                if(search && g.name.indexOf(search) === -1) return;
-                const d = document.createElement('div');
-                d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
-                d.innerHTML = `
-                    <div class="guest-info">
-                        <img src="${g.photo || defaultAvatar}" class="guest-avatar">
-                        <div>
-                            <div style="font-weight:bold; font-size:1.1rem;">${g.name}</div>
-                            <div style="font-size:0.8rem;color:#666">${g.title}</div>
-                        </div>
-                    </div>
-                    <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>`;
-                list.appendChild(d);
-            });
-        }
-
-        // 修正 7: 輸出端卡片響應式與純發亮特效
-        function renderDashboard() {
-            const grid = document.getElementById('dashboard-grid');
-            grid.innerHTML = '';
-            
-            let list = Object.values(guestsData).filter(g => {
-                if (!g.arrived) return false;
-                if (['External', 'Official', 'Officials'].includes(g.group)) return true;
-                if (['Internal', 'internal'].includes(g.group) && (g.title.includes('會長') || g.title.includes('主席'))) return true;
-                return false;
-            });
-
-            list.sort((a, b) => (!a.acked ? 0 : 1) - (!b.acked ? 0 : 1) || (b.timestamp - a.timestamp));
-
-            list.forEach(g => {
-                const d = document.createElement('div');
-                d.className = `vip-card ${!g.acked ? 'active-light' : 'acked-card'}`;
-                d.onclick = () => db.ref(`events_data/${currentEventId}/${g.id}`).update({ acked: true });
-                
-                d.innerHTML = `
-                    <img src="${g.photo || defaultAvatar}" class="avatar">
-                    <div style="font-weight:bold; font-size:${!g.acked ? '1.5rem':'1.1rem'};">${g.name}</div>
-                    <div style="color:#666; font-size:0.9rem;">${g.title}</div>
-                    ${!g.acked ? '<div style="color:red; font-size:0.8rem; animation:blink 1s infinite; margin-top:5px;">● NEW Arrival</div>' : ''}
-                `;
-                grid.appendChild(d);
-            });
-        }
-
-        function checkIn(id, status) {
-            db.ref(`events_data/${currentEventId}/${id}`).update({ arrived: status, timestamp: status ? firebase.database.ServerValue.TIMESTAMP : 0, acked: status ? false : null });
-        }
-
-        function renderEventList() {
-            const list = document.getElementById('event-list');
-            list.innerHTML = '';
-            Object.values(allEvents).sort((a,b)=>b.created-a.created).forEach(evt => {
-                const div = document.createElement('div');
-                div.className = `event-card ${evt.id === currentEventId ? 'active' : ''}`;
-                div.innerHTML = `<div><div style="font-weight:bold">${evt.name}</div></div><button onclick="selectEvent('${evt.id}','${evt.name}')" style="background:var(--jci-blue);color:white;border:none;padding:6px 15px;border-radius:20px;cursor:pointer">進入</button>`;
-                list.appendChild(div);
-            });
+            if(p === 'member') document.querySelectorAll('.nav-item')[0].classList.add('active');
+            if(p === 'reception') document.querySelectorAll('.nav-item')[1].classList.add('active');
+            if(p === 'dashboard') document.querySelectorAll('.nav-item')[2].classList.add('active');
+            if(p !== 'reception' && html5QrCode) { html5QrCode.stop().then(() => document.getElementById('scanner-view').style.display='none').catch(()=>{}); }
         }
 
         function selectEvent(id, name) {
             currentEventId = id;
-            document.getElementById('current-event-display').innerHTML = `<span>📅</span> ${name}`;
             db.ref(`events_data/${id}`).on('value', snap => {
                 guestsData = snap.val() || {};
                 renderReception();
@@ -335,39 +166,138 @@
             goPage('reception');
         }
 
-        function createNewEvent() {
-            Swal.fire({ title: '建立新活動', input: 'text', showCancelButton: true }).then((r) => {
-                if (r.isConfirmed && r.value) {
-                    const id = 'evt_' + Date.now();
-                    db.ref('events_meta/' + id).set({ id: id, name: r.value, created: Date.now() });
+        // ★★★ 同步名單 (V14 經典模式: Fetch + URL) ★★★
+        function syncFromCloud() {
+            if (!currentEventId) return Swal.fire("錯誤", "請先選擇活動", "error");
+            if (GAS_API_URL.includes("貼在這裡")) return Swal.fire("設定錯誤", "請在 HTML 代碼第 170 行貼上 GAS 網址", "error");
+
+            Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
+            
+            fetch(GAS_API_URL + "?op=get_all")
+                .then(r => r.json())
+                .then(data => {
+                    const updates = {};
+                    data.forEach(row => {
+                        const existing = guestsData[row.id];
+                        updates[row.id] = {
+                            id: row.id, name: row.name, title: row.title, group: row.group,
+                            photo: row.photo || "", 
+                            arrived: existing ? existing.arrived : false, 
+                            timestamp: existing ? existing.timestamp : 0,
+                            acked: existing ? existing.acked : null
+                        };
+                    });
+                    db.ref(`events_data/${currentEventId}`).update(updates)
+                      .then(() => Swal.fire("成功", `更新 ${data.length} 筆`, "success"));
+                })
+                .catch(e => Swal.fire("失敗", "無法連接 GAS，請確認網址", "error"));
+        }
+
+        // ★★★ 會員登入 (V14 經典模式: Fetch + URL) ★★★
+        function verifyWithGoogle() {
+            const id = document.getElementById('login-id').value;
+            const dob = document.getElementById('login-dob').value;
+            if (GAS_API_URL.includes("貼在這裡")) return Swal.fire("設定錯誤", "請先填入 GAS 網址", "error");
+
+            fetch(`${GAS_API_URL}?id=${id}&dob=${dob}`).then(r=>r.json()).then(d=>{
+                if(d.status==='success') {
+                    document.getElementById('login-form').style.display='none';
+                    document.getElementById('pass-area').style.display='block';
+                    document.getElementById('pass-name').innerText=d.name;
+                    document.getElementById('pass-title').innerText=d.title;
+                    document.getElementById('pass-photo').src=getLH3(d.photo);
+                    document.getElementById('qrcode').innerHTML='';
+                    new QRCode(document.getElementById('qrcode'), {text:d.uid, width:150, height:150});
+                } else Swal.fire("失敗", "資料不符", "error");
+            }).catch(e => Swal.fire("錯誤", "連線失敗", "error"));
+        }
+        
+        // ★★★ 產生入場 QR (V14 經典模式: 使用 GAS URL) ★★★
+        function showSiteQR() {
+            if (GAS_API_URL.includes("貼在這裡")) return Swal.fire("設定錯誤", "請先填入 GAS 網址", "error");
+            document.getElementById('site-qr-modal').style.display = 'flex';
+            document.getElementById('site-qr-target').innerHTML = '';
+            new QRCode(document.getElementById('site-qr-target'), { text: GAS_API_URL + "?mode=entry", width: 250, height: 250 });
+        }
+
+        // 入口判斷
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('mode') === 'entry') {
+                document.getElementById('nav-bar').style.display = 'none';
+                goPage('member');
+            }
+        };
+
+        // 其他基礎功能 (新增/匯出/刪除)
+        function addNewGuest() {
+            if (!currentEventId) return;
+            Swal.fire({
+                title: '新增來賓',
+                html: '<input id="sw-name" class="styled-input" placeholder="姓名"><input id="sw-title" class="styled-input" placeholder="職稱"><select id="sw-group" class="styled-input"><option value="Official">貴賓</option><option value="External">友會</option><option value="Internal">本會</option></select>',
+                showCancelButton: true, confirmButtonText: '新增',
+                preConfirm: () => {
+                    const name = document.getElementById('sw-name').value;
+                    if (!name) return Swal.showValidationMessage('請輸入姓名');
+                    return { name: name, title: document.getElementById('sw-title').value, group: document.getElementById('sw-group').value };
+                }
+            }).then(res => {
+                if(res.isConfirmed) {
+                    const id = "walkin_" + Date.now();
+                    db.ref(`events_data/${currentEventId}/${id}`).set({ id: id, ...res.value, arrived: true, acked: false, timestamp: firebase.database.ServerValue.TIMESTAMP, photo: "" });
                 }
             });
         }
-
-        function verifyWithGoogle() {
-            const id = document.getElementById('login-id').value.trim().toUpperCase();
-            const dob = document.getElementById('login-dob').value.trim();
-            const btn = document.getElementById('btn-verify');
-            btn.innerText = "驗證中...";
-            fetch(`${GOOGLE_SCRIPT_URL}?id=${id}&dob=${dob}`).then(r => r.json()).then(d => {
-                btn.innerText = "確認登入";
-                if (d.status === 'success') {
-                    document.getElementById('login-form').style.display='none';
-                    document.getElementById('pass-area').style.display='block';
-                    document.getElementById('pass-name').innerText = d.name;
-                    document.getElementById('pass-title').innerText = d.title;
-                    // 將照片 ID 轉 LH3
-                    document.getElementById('pass-photo').src = d.photo ? "https://lh3.googleusercontent.com/d/" + d.photo : defaultAvatar;
-                    document.getElementById('qrcode').innerHTML = '';
-                    new QRCode(document.getElementById('qrcode'), { text: d.uid, width: 180, height: 180 });
-                } else { Swal.fire("錯誤", "資料不符", "error"); }
+        function exportCSV() {
+            if (!currentEventId) return;
+            let csv = "\uFEFF姓名,職稱,群組,狀態,時間\n";
+            Object.values(guestsData).forEach(g => { csv += `${g.name},${g.title},${g.group},${g.arrived?'已報到':'未到'},${g.timestamp?new Date(g.timestamp).toLocaleString():''}\n`; });
+            const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); link.download="list.csv"; link.click();
+        }
+        function deleteCurrentEvent() {
+            if(confirm("確定刪除此活動？")) {
+                db.ref(`events_meta/${currentEventId}`).remove(); db.ref(`events_data/${currentEventId}`).remove();
+                currentEventId=null; goPage('home');
+            }
+        }
+        function renderReception() {
+            const list = document.getElementById('reception-list');
+            const search = document.getElementById('search-box').value.toUpperCase();
+            list.innerHTML = '';
+            Object.values(guestsData).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).forEach(g => {
+                if(search && !(g.name.includes(search)||g.title.includes(search))) return;
+                const d = document.createElement('div');
+                d.style = "background:white; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid #eee;";
+                d.innerHTML = `
+                    <div style="display:flex;align-items:center;">
+                        <img src="${getLH3(g.photo)}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;margin-right:15px;border:1px solid #ddd;" onerror="this.src='${defaultAvatar}'">
+                        <div><div style="font-weight:bold;">${g.name}</div><div style="font-size:0.8rem;color:#666;">${g.title}</div></div>
+                    </div>
+                    <button class="btn-tool" style="background:${g.arrived?'#ccc':'var(--jci-blue)'}; width:auto;" onclick="checkIn('${g.id}', ${!g.arrived})">${g.arrived?'取消':'簽到'}</button>
+                `;
+                list.appendChild(d);
             });
         }
-
-        function showSiteQR() {
-            document.getElementById('site-qr-modal').style.display = 'flex';
-            document.getElementById('site-qrcode').innerHTML = '';
-            new QRCode(document.getElementById('site-qrcode'), { text: window.location.href + "?mode=entry", width: 250, height: 250 });
+        function renderDashboard() {
+            const grid = document.getElementById('dashboard-grid');
+            grid.innerHTML = '';
+            const list = Object.values(guestsData).filter(g => g.arrived && (['Official','External'].includes(g.group) || (['Internal','Member'].includes(g.group) && (g.title.includes('會長')||g.title.includes('主席')))));
+            list.sort((a,b) => (!a.acked?0:1) - (!b.acked?0:1) || (b.timestamp - a.timestamp));
+            list.forEach(g => {
+                const d = document.createElement('div');
+                d.className = `vip-card ${!g.acked?'active-light':'acked-card'}`;
+                d.onclick = () => db.ref(`events_data/${currentEventId}/${g.id}`).update({ acked: true });
+                d.innerHTML = `<img src="${getLH3(g.photo)}" onerror="this.src='${defaultAvatar}'"><div style="font-weight:bold;font-size:1.3rem;">${g.name}</div><div>${g.title}</div>`;
+                grid.appendChild(d);
+            });
+        }
+        function checkIn(id, status) {
+            db.ref(`events_data/${currentEventId}/${id}`).update({ arrived: status, timestamp: status?firebase.database.ServerValue.TIMESTAMP:0, acked: status?false:null });
+        }
+        function toggleCamera() {
+            const v = document.getElementById('scanner-view');
+            if(v.style.display==='block') { if(html5QrCode) html5QrCode.stop(); v.style.display='none'; }
+            else { v.style.display='block'; html5QrCode=new Html5Qrcode("reader"); html5QrCode.start({facingMode:"environment"}, {fps:10, qrbox:250}, (txt)=>{ if(guestsData[txt]) checkIn(txt,true); }); }
         }
     </script>
 </body>
