@@ -595,11 +595,54 @@
                 db.ref(`events_data/${currentEventId}`).set(newData).then(() => Swal.fire("同步成功", `匯入 ${data.length} 筆`, "success"));
             }).catch(()=> Swal.fire("失敗", "檢查腳本部署", "error"));
         }
-        function exportCSV() {
-            let csv = "\uFEFF姓名,職稱,狀態,時間\n";
-            Object.values(guestsData).forEach(g => { csv += `${g.name},${g.title},${g.arrived?'已到':'未到'},${g.arrived && g.timestamp ? new Date(g.timestamp).toLocaleTimeString() : ""}\n`; });
-            const l = document.createElement("a"); l.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); l.download = "record.csv"; l.click();
+        // ==========================================
+// ★★★ 修改版 V3：匯出 CSV (檔名=活動名 / 未到留白 / 職稱單純化) ★★★
+// ==========================================
+function exportCSV() {
+    // 1. 取得活動名稱作為檔名
+    // 如果找不到名稱，就預設用 "簽到表"
+    let eventName = "簽到表";
+    if (currentEventId && allEvents[currentEventId]) {
+        eventName = allEvents[currentEventId].name;
+    }
+
+    // 2. 設定表頭
+    let csv = "\uFEFF系統ID,姓名,職稱,分類,簽到狀態,報到時間\n";
+
+    Object.values(guestsData).forEach(g => {
+        // 3. 處理狀態與時間 (未到者 -> 全部留白)
+        let statusStr = "";
+        let timeStr = "";
+
+        if (g.arrived) {
+            statusStr = "已到"; // 只有已到才顯示文字
+            
+            // 處理時間格式
+            if (g.timestamp) {
+                let d = new Date(g.timestamp);
+                const pad = (n) => (n < 10 ? '0' + n : n);
+                timeStr = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+            }
         }
+        // 如果未到 (else)，statusStr 和 timeStr 保持為空字串 ""
+
+        // 4. 職稱處理 (直接取用 title，不加任何裝飾)
+        let cleanTitle = g.title || "";
+
+        // 5. 組合資料
+        // 注意：Excel 判斷空值就是兩個逗號 ,, 之間沒有東西
+        csv += `${g.id},${g.name},${cleanTitle},${g.group || ''},${statusStr},${timeStr}\n`;
+    });
+
+    // 6. 產生下載
+    const l = document.createElement("a");
+    l.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+    
+    // 設定檔名
+    l.download = eventName + ".csv";
+    
+    l.click();
+}
 
         function showSiteQR() {
             document.getElementById('site-qr-modal').style.display = 'flex';
