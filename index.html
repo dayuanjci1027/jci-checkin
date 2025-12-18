@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCI 活動管理系統 V1.1 (輸出入端調整版)</title>
+    <title>JCI 活動管理系統 V1.2 (大字體強化版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -143,41 +143,53 @@
         #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
 
-        /* --- ★★★ 輸出端 (Dashboard) 修改版 ★★★ --- */
+        /* --- ★★★ 輸出端 (Dashboard) V1.2 大改版 ★★★ --- */
         #dashboard-grid {
-            display: flex; flex-wrap: wrap; justify-content: flex-start; align-content: flex-start; gap: 15px;
+            display: flex; flex-wrap: wrap; justify-content: flex-start; align-content: flex-start; gap: 20px;
             padding: 10px;
         }
 
-        /* 統一卡片樣式 (不分大小，只分顏色) */
+        /* 統一卡片基礎樣式 - 尺寸加大以容納大字體 */
         .vip-card { 
-            background: white; padding: 15px; border-radius: 12px; text-align: center; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+            background: white; padding: 20px; border-radius: 16px; text-align: center; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
             position: relative; overflow: hidden;
-            width: 180px; /* 固定寬度，讓它自動換行 */
-            flex-grow: 1; /* 允許稍微撐開填滿 */
-            max-width: 220px; /* 限制最大寬度 */
+            
+            /* ★★★ 寬度加大 ★★★ */
+            width: 280px; 
+            flex-grow: 1; 
+            max-width: 350px; 
+            
             transition: 0.3s; 
-            border: 3px solid transparent; /* 預留邊框位置 */
+            border: 4px solid transparent; /* 預留邊框空間 */
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
         .avatar { 
-            width: 70px; height: 70px; border-radius: 50%; object-fit: cover; 
-            margin-bottom: 10px; border: 3px solid #f0f2f5; 
+            /* ★★★ 頭像稍微放大 ★★★ */
+            width: 100px; height: 100px; border-radius: 50%; object-fit: cover; 
+            margin-bottom: 15px; border: 4px solid #f0f2f5; 
         }
 
-        /* 剛報到 (New) - 只改變邊框顏色，不放大 */
+        /* ★★★ 剛報到 (New) - 超顯眼特效 ★★★ */
         .vip-card.new-arrival {
-            border-color: #FFC107; /* 黃色邊框 */
-            background: #fffceb;   /* 淡淡黃底 */
-            animation: pulseBorder 2s infinite;
+            /* 紅橘色邊框 */
+            border-color: #ff3d00; 
+            /* 亮黃色背景，與白色區隔 */
+            background: #fff9c4;   
+            /* 強烈發光陰影 */
+            box-shadow: 0 0 30px rgba(255, 61, 0, 0.5);
+            /* 呼吸燈動畫 */
+            animation: distinctFlash 1.5s infinite alternate;
+            /* 稍微放大一點點，突顯地位但不擋人 */
+            transform: scale(1.05);
+            z-index: 10;
         }
 
-        @keyframes pulseBorder {
-            0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+        /* 呼吸燈動畫 */
+        @keyframes distinctFlash {
+            0% { border-color: #ff3d00; box-shadow: 0 0 20px rgba(255, 61, 0, 0.4); }
+            100% { border-color: #FFC107; box-shadow: 0 0 40px rgba(255, 193, 7, 0.8); }
         }
 
         .swal2-input { font-size: 1rem !important; }
@@ -425,7 +437,6 @@
             } else { Swal.fire("錯誤", "非本場名單", "error"); }
         }
 
-        // ★★★ 修改 2: 輸入端列表加入照片 ★★★
         function renderReception() {
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
@@ -437,7 +448,6 @@
                 const d = document.createElement('div');
                 d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
                 
-                // 加入照片並使用 Flex 排版
                 d.innerHTML = `
                     <div style="display:flex; align-items:center;">
                         <img src="${g.photo || defaultAvatar}" class="guest-photo-small">
@@ -463,7 +473,7 @@
             db.ref(`events_data/${currentEventId}/${id}`).update(updates);
         }
 
-        // ★★★ 修改 3: 輸出端移除彈出，改為單純格狀排列 ★★★
+        // ★★★ 修改: 輸出端 (Dashboard) 字體放大 + 顯眼提示 ★★★
         function renderDashboard() {
             const grid = document.getElementById('dashboard-grid');
             const emptyMsg = document.getElementById('empty-msg');
@@ -485,7 +495,7 @@
                 emptyMsg.style.display = 'none';
             }
 
-            // 2. 排序：未讀在前，時間倒序在後
+            // 2. 排序
             list.sort((a, b) => {
                 const scoreA = (!a.acked) ? 2 : 1;
                 const scoreB = (!b.acked) ? 2 : 1;
@@ -493,24 +503,25 @@
                 return (b.timestamp || 0) - (a.timestamp || 0);
             });
 
-            // 3. 渲染 - 統一使用小卡樣式
+            // 3. 渲染
             list.forEach(g => {
                 const d = document.createElement('div');
                 
-                // 判斷是否為「剛報到 (未讀)」，給予不同 Class，但排版邏輯一致
+                // 區分新舊 (只有邊框和背景色不同，不再放大尺寸)
                 let cardClass = 'vip-card';
                 if (!g.acked) {
-                    cardClass += ' new-arrival'; // 加上閃爍邊框
+                    cardClass += ' new-arrival'; 
                 }
 
                 d.className = cardClass;
-                d.onclick = function() { ackGuest(g.id); }; // 點擊可消除閃爍狀態
+                d.onclick = function() { ackGuest(g.id); }; 
                 d.style.cursor = "pointer";
 
+                // ★★★ 這裡將 font-size 直接寫在 style 裡，確保 2 倍大 ★★★
                 d.innerHTML = `
                     <img src="${g.photo||defaultAvatar}" class="avatar">
-                    <div style="font-weight:bold;margin-bottom:5px;font-size:1.1rem;">${g.name}</div>
-                    <div style="font-size:0.9rem;color:#666">${g.title}</div>
+                    <div style="font-weight:bold;margin-bottom:5px; font-size:2.5rem; line-height:1.2;">${g.name}</div>
+                    <div style="font-size:1.5rem;color:#666;">${g.title}</div>
                 `;
                 grid.appendChild(d);
             });
@@ -520,7 +531,6 @@
             db.ref(`events_data/${currentEventId}/${id}`).update({ acked: true });
         }
 
-        // 新增現場來賓
         function addNewGuest() {
             Swal.fire({
                 title: '新增現場來賓',
