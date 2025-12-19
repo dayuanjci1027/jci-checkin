@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCI 自助報到系統 V1.7</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JCI 自助報到系統 V1.8</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -23,25 +23,57 @@
         
         body { 
             font-family: 'Noto Sans TC', sans-serif; margin: 0; background: #f0f2f5; 
-            height: 100vh; display: flex; flex-direction: column; 
+            height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;
         }
 
-        /* --- 導航列 --- */
+        /* --- 導航列 (RWD 修改版) --- */
         #nav-bar { 
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.98); 
             padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05); z-index: 100; position: sticky; top: 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05); z-index: 999; position: sticky; top: 0;
+            height: 50px; /* 固定高度 */
         }
         .hide-nav { display: none !important; }
+
+        .event-badge { 
+            background: #333; color: white; padding: 6px 15px; border-radius: 20px; 
+            font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 5px; z-index: 1001;
+        }
+
+        /* 電腦版選單 (預設顯示) */
         .nav-group { display: flex; gap: 5px; }
         .nav-item { 
             cursor: pointer; color: #666; font-weight: 500; padding: 8px 16px; 
-            border-radius: 20px; font-size: 0.9rem; transition: all 0.3s ease; 
+            border-radius: 20px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap;
         }
         .nav-item.active { background: var(--jci-blue); color: white; box-shadow: 0 2px 10px rgba(0,151,215,0.3); }
-        .event-badge { 
-            background: #333; color: white; padding: 6px 15px; border-radius: 20px; 
-            font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 5px;
+
+        /* 手機版漢堡選單按鈕 (預設隱藏) */
+        .mobile-menu-btn { display: none; font-size: 1.8rem; cursor: pointer; color: var(--jci-dark); z-index: 1001; user-select: none; }
+
+        /* 手機版下拉選單 (預設隱藏) */
+        .mobile-dropdown {
+            display: none;
+            position: absolute; top: 70px; left: 0; width: 100%;
+            background: white; flex-direction: column;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1); border-bottom: 1px solid #eee;
+            animation: slideDown 0.3s ease;
+        }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- RWD 媒體查詢 --- */
+        @media (max-width: 768px) {
+            .nav-group { display: none; } /* 隱藏電腦版選單 */
+            .mobile-menu-btn { display: block; } /* 顯示漢堡按鈕 */
+            
+            .mobile-dropdown.show { display: flex; } /* 切換顯示 */
+            
+            .nav-item { 
+                border-radius: 0; padding: 15px; text-align: center; border-bottom: 1px solid #f5f5f5; 
+                font-size: 1.1rem; 
+            }
+            .nav-item:last-child { border-bottom: none; }
+            .nav-item.active { background: #e3f2fd; color: var(--jci-blue); box-shadow: none; }
         }
 
         /* --- 頁面切換 --- */
@@ -50,39 +82,78 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         /* --- 通用樣式 --- */
-        .login-bg { display: flex; align-items: center; justify-content: center; min-height: 80vh; padding: 20px; box-sizing: border-box; }
+        .login-bg { display: flex; align-items: flex-start; /* 改為靠上對齊 */ justify-content: center; min-height: 80vh; padding: 20px; box-sizing: border-box; }
+        
         .login-card { 
-            background: white; width: 100%; max-width: 400px; padding: 40px; 
-            border-radius: 24px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.1); 
-            position: relative; overflow: hidden;
+            background: white; width: 100%; max-width: 400px; 
+            padding: 30px; /* 縮小內距 */
+            border-radius: 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.08); 
+            position: relative; overflow: hidden; margin-top: 10px;
         }
         
-        /* ★★★ Logo 樣式 ★★★ */
         .login-logo {
-            width: 80%; max-width: 250px; height: auto;
-            margin: 0 auto 20px auto; display: block;
+            width: 70%; max-width: 220px; height: auto;
+            margin: 0 auto 15px auto; display: block;
         }
 
-        /* ★★★ 修正 QR Code 對齊樣式 (絕對置中) ★★★ */
+        /* --- 領證卡片瘦身優化 (Pass Area) --- */
+        #pass-area {
+            display: none; 
+            margin-top: 10px; /* 縮小上方間距 */
+            animation: fadeIn 0.5s;
+        }
+
+        #pass-photo {
+            width: 100px; height: 100px; /* 縮小照片 */
+            border-radius: 50%; object-fit: cover; 
+            margin-bottom: 5px; 
+            border: 4px solid #f0f2f5; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        #pass-name {
+            font-weight: bold; font-size: 1.6rem; /* 字體稍小 */
+            margin-top: 5px; margin-bottom: 0;
+            color: var(--jci-dark);
+            line-height: 1.2;
+        }
+
+        #pass-title {
+            color: #888; font-size: 1rem; margin-bottom: 5px;
+        }
+
+        /* QR Code 容器優化 */
         #qrcode {
-            margin-top: 25px;
-            display: flex; /* Flexbox 讓內容置中 */
-            justify-content: center;
-            align-items: center;
-            padding: 15px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.08); 
+            margin-top: 10px; margin-bottom: 10px;
+            display: flex; justify-content: center; align-items: center;
+            padding: 10px; /* 減少內距 */
+            background: white; border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            width: fit-content; margin-left: auto; margin-right: auto;
         }
         #qrcode img { display: block; }
 
-        .styled-input { width: 100%; padding: 14px 16px; border: 2px solid #eee; border-radius: 12px; font-size: 1rem; margin-bottom: 20px; box-sizing: border-box; text-align: center; }
+        .save-hint { font-size: 0.8rem; color: #999; background: #f8f9fa; padding: 5px 10px; border-radius: 15px; display: inline-block; margin-bottom: 5px; }
+
+        .styled-input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 1rem; margin-bottom: 15px; box-sizing: border-box; text-align: center; }
+        
         .btn-gradient { 
-            width: 100%; padding: 16px; background: var(--bg-gradient); color: white; 
+            width: 100%; padding: 14px; background: var(--bg-gradient); color: white; 
             border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; 
-            transition: 0.3s; margin-top: 10px; box-shadow: 0 5px 15px rgba(0,151,215,0.3);
+            transition: 0.3s; margin-top: 5px; box-shadow: 0 5px 15px rgba(0,151,215,0.3);
         }
         .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,151,215,0.4); }
+
+        /* --- 針對手機極致縮短卡片 --- */
+        @media (max-width: 480px) {
+            .login-card { padding: 20px; border-radius: 20px; }
+            .login-logo { width: 60%; margin-bottom: 10px; }
+            #pass-photo { width: 85px; height: 85px; border-width: 3px; }
+            #pass-name { font-size: 1.4rem; }
+            #pass-title { font-size: 0.9rem; }
+            #qrcode { padding: 5px; margin-top: 5px; }
+            .styled-input { padding: 10px; font-size: 0.95rem; }
+        }
         
         /* --- 輸入端列表與按鈕 --- */
         .event-card { background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; }
@@ -106,14 +177,13 @@
         #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
 
-        /* --- 自助報到 (Kiosk) 專用樣式 --- */
+        /* --- 自助報到 (Kiosk) --- */
         #kiosk-start-btn { width: 260px; height: 260px; border-radius: 50%; font-size: 2.2rem; background: var(--bg-gradient); color: white; border: none; box-shadow: 0 15px 40px rgba(0,151,215,0.5); cursor: pointer; animation: pulse 2s infinite; font-weight: bold; letter-spacing: 2px; }
         @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 15px 40px rgba(0,151,215,0.5); } 50% { transform: scale(1.05); box-shadow: 0 20px 50px rgba(0,151,215,0.7); } 100% { transform: scale(1); box-shadow: 0 15px 40px rgba(0,151,215,0.5); } }
         
         #kiosk-scanner-container { display: none; width: 100%; max-width: 500px; background: black; border-radius: 25px; overflow: hidden; margin: 0 auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
         #kiosk-success-view { display: none; text-align: center; }
         
-        /* 倒數條 */
         .countdown-bar { height: 6px; background: #eee; width: 100%; margin-top: 25px; border-radius: 10px; overflow: hidden; }
         .countdown-fill { height: 100%; background: #28a745; width: 100%; transition: width 3s linear; }
 
@@ -125,7 +195,17 @@
         <div class="event-badge" onclick="goPage('home')" id="current-event-display">
             <span>🏠</span> 尚未選擇活動
         </div>
+        
+        <div class="mobile-menu-btn" onclick="toggleMenu()">☰</div>
+
         <div class="nav-group">
+            <div class="nav-item" onclick="goPage('member')">會員領證</div>
+            <div class="nav-item" onclick="goPage('kiosk')">自助報到</div>
+            <div class="nav-item" onclick="goPage('reception')">輸入端</div>
+            <div class="nav-item" onclick="goPage('dashboard')">輸出端</div>
+        </div>
+
+        <div class="mobile-dropdown" id="mobile-nav">
             <div class="nav-item" onclick="goPage('member')">會員領證</div>
             <div class="nav-item" onclick="goPage('kiosk')">自助報到</div>
             <div class="nav-item" onclick="goPage('reception')">輸入端</div>
@@ -147,21 +227,22 @@
             <div class="login-card">
                 <img src="https://lh3.googleusercontent.com/d/1XbUrBBqLrGL3wceODZl790Bk1oGTp3do" alt="JCI Dayuan Logo" class="login-logo">
                 
-                <div id="login-form" style="margin-top: 30px;">
+                <div id="login-form" style="margin-top: 20px;">
                     <input type="text" id="login-id" class="styled-input" placeholder="身分證字號 (英文字母大寫)">
                     <input type="text" id="login-dob" class="styled-input" placeholder="生日 (例如: 19920101)">
                     <button id="btn-verify" class="btn-gradient" onclick="verifyWithGoogle()">領取通行證</button>
                 </div>
                 
-                <div id="pass-area" style="display:none; margin-top:30px; animation: fadeIn 0.5s;">
-                    <img id="pass-photo" class="avatar" style="width:130px; height:130px;" src="">
-                    <div id="pass-name" style="font-weight:bold; font-size:1.8rem; margin-top: 10px; color: var(--jci-dark);"></div>
-                    <div id="pass-title" style="color:#888; font-size: 1.1rem;"></div>
+                <div id="pass-area">
+                    <img id="pass-photo" src="">
+                    <div id="pass-name"></div>
+                    <div id="pass-title"></div>
                     
                     <div id="qrcode"></div>
                     
-                    <div style="margin-top:15px; font-size:0.9rem; color:#666; background: #f8f9fa; padding: 8px; border-radius: 8px;">請截圖保存此畫面</div>
-                    <button onclick="location.reload()" style="background:none; border:none; color:#999; margin-top:20px; cursor:pointer; text-decoration:underline; font-size: 0.9rem;">重新領取</button>
+                    <div class="save-hint">請截圖保存</div>
+                    <br>
+                    <button onclick="location.reload()" style="background:none; border:none; color:#999; margin-top:10px; cursor:pointer; text-decoration:underline; font-size: 0.9rem;">重新領取</button>
                 </div>
             </div>
         </div>
@@ -260,14 +341,36 @@
             }
         };
 
+        // ★★★ 切換手機選單 ★★★
+        function toggleMenu() {
+            const menu = document.getElementById('mobile-nav');
+            menu.classList.toggle('show');
+        }
+
         function goPage(p) {
             if (!currentEventId && p !== 'home' && p !== 'member') return Swal.fire("請先在活動大廳選擇一個活動");
+            
+            // 關閉手機選單
+            document.getElementById('mobile-nav').classList.remove('show');
+
             document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
             document.getElementById('page-' + p).classList.add('active');
             
-            document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+            // 更新選單狀態 (電腦版)
+            document.querySelectorAll('.nav-group .nav-item').forEach(e => e.classList.remove('active'));
+            // 更新選單狀態 (手機版)
+            document.querySelectorAll('#mobile-nav .nav-item').forEach(e => e.classList.remove('active'));
+
             const navMap = {'member':0, 'kiosk':1, 'reception':2, 'dashboard':3};
-            if(navMap[p] !== undefined) document.querySelectorAll('.nav-item')[navMap[p]].classList.add('active');
+            if(navMap[p] !== undefined) {
+                // 電腦版 Highlight
+                const desktopItems = document.querySelectorAll('.nav-group .nav-item');
+                if(desktopItems[navMap[p]]) desktopItems[navMap[p]].classList.add('active');
+                
+                // 手機版 Highlight
+                const mobileItems = document.querySelectorAll('#mobile-nav .nav-item');
+                if(mobileItems[navMap[p]]) mobileItems[navMap[p]].classList.add('active');
+            }
 
             // 換頁時關閉所有相機
             if(p !== 'reception') stopCamera(); 
@@ -322,8 +425,19 @@
                     document.getElementById('pass-title').innerText = d.title;
                     document.getElementById('pass-photo').src = d.photo || defaultAvatar;
                     document.getElementById('qrcode').innerHTML = '';
-                    // 修正 QR Code 尺寸和顏色
-                    new QRCode(document.getElementById('qrcode'), { text: d.uid, width: 200, height: 200, colorDark : "#005780", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
+                    
+                    // ★★★ QR Code 手機版尺寸調整 (縮小一點避免太長) ★★★
+                    let qrSize = 200;
+                    if(window.innerWidth < 480) qrSize = 160; 
+
+                    new QRCode(document.getElementById('qrcode'), { 
+                        text: d.uid, 
+                        width: qrSize, 
+                        height: qrSize, 
+                        colorDark : "#005780", 
+                        colorLight : "#ffffff", 
+                        correctLevel : QRCode.CorrectLevel.H 
+                    });
                 } else { Swal.fire("驗證失敗", "資料不符", "error"); }
             }).catch(()=> { btn.innerText="領取通行證"; btn.disabled=false; Swal.fire("連線錯誤", "請檢查網路", "error"); });
         }
@@ -335,7 +449,6 @@
             document.getElementById('kiosk-scanner-container').style.display = 'block';
 
             kioskQrCode = new Html5Qrcode("kiosk-reader");
-            // 使用前鏡頭 (user)
             kioskQrCode.start({ facingMode: "user" }, { fps: 10, qrbox: { width: 300, height: 300 } }, onKioskScanSuccess)
             .catch(err => {
                 console.error(err);
@@ -352,39 +465,27 @@
         }
 
         function onKioskScanSuccess(uid) {
-            // 掃到後暫停相機
             if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
             document.getElementById('kiosk-scanner-container').style.display = 'none';
 
             if(guestsData[uid]) {
                 const g = guestsData[uid];
-                
-                // 執行簽到
                 if(!g.arrived) checkIn(uid, true);
                 
-                // 顯示成功畫面
                 document.getElementById('kiosk-success-view').style.display = 'block';
                 document.getElementById('kiosk-photo').src = g.photo || defaultAvatar;
                 document.getElementById('kiosk-name').innerText = g.name;
                 document.getElementById('kiosk-title').innerText = g.title;
                 
-                // 倒數計時動畫 (3秒)
                 const fill = document.getElementById('countdown-fill');
                 fill.style.transition = 'none';
-                fill.style.width = '100%'; // 重置
-                
-                setTimeout(() => {
-                    fill.style.transition = 'width 3s linear';
-                    fill.style.width = '0%';
-                }, 100);
-
-                setTimeout(() => {
-                    stopKiosk(); // 3秒後自動回到待機
-                }, 3000);
+                fill.style.width = '100%';
+                setTimeout(() => { fill.style.transition = 'width 3s linear'; fill.style.width = '0%'; }, 100);
+                setTimeout(() => { stopKiosk(); }, 3000);
 
             } else {
                 Swal.fire({ icon: 'error', title: '掃描失敗', text: '此 QR Code 不在名單中', timer: 2000, showConfirmButton: false })
-                .then(() => startKiosk()); // 失敗重啟
+                .then(() => startKiosk());
             }
         }
 
@@ -395,7 +496,6 @@
             document.getElementById('btn-cam').innerText = "❌ 關閉相機";
             document.getElementById('btn-cam').style.background = "#333";
             html5QrCode = new Html5Qrcode("reader");
-            // 使用後鏡頭 (environment)
             html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (uid)=>{
                 if(guestsData[uid]) {
                     if(!guestsData[uid].arrived) {
@@ -414,7 +514,6 @@
             isScanning = false;
         }
 
-        // 渲染列表
         function renderReception() {
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
@@ -432,7 +531,6 @@
             db.ref(`events_data/${currentEventId}/${id}`).update({ arrived: status, timestamp: status ? firebase.database.ServerValue.TIMESTAMP : 0, acked: status ? false : null });
         }
 
-        // 牆面
         function renderDashboard() {
             const grid = document.getElementById('dashboard-grid');
             const emptyMsg = document.getElementById('empty-msg');
@@ -460,7 +558,6 @@
         }
         function ackGuest(id) { db.ref(`events_data/${currentEventId}/${id}`).update({ acked: true }); }
         
-        // 其他功能
         function addNewGuest() {
             Swal.fire({
                 title: '新增現場來賓', html: `<input id="swal-name" class="swal2-input" placeholder="姓名"><input id="swal-title" class="swal2-input" placeholder="職稱"><select id="swal-group" class="swal2-input"><option value="External">友會貴賓</option><option value="Official">長官</option><option value="Internal">本會會員</option></select>`,
