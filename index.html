@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 自助報到系統 V1.9</title>
+    <title>JCI 自助報到系統 V2.0 (系統鎖版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -25,6 +25,20 @@
             font-family: 'Noto Sans TC', sans-serif; margin: 0; background: #f0f2f5; 
             height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;
         }
+
+        /* --- ★★★ V2.0 新增：系統鎖定遮罩 (Lock Screen) ★★★ --- */
+        #system-lock-screen {
+            display: none; /* 預設隱藏，由 JS 控制 */
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 1);
+            z-index: 9999; /* 蓋在所有東西上面 */
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        .lock-card {
+            background: white; padding: 40px; border-radius: 20px; text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15); max-width: 350px; width: 90%;
+        }
+        .lock-icon { font-size: 4rem; color: var(--jci-dark); margin-bottom: 20px; }
 
         /* --- 導航列 --- */
         #nav-bar { 
@@ -132,45 +146,26 @@
         .countdown-bar { height: 6px; background: #eee; width: 100%; margin-top: 25px; border-radius: 10px; overflow: hidden; }
         .countdown-fill { height: 100%; background: #28a745; width: 100%; transition: width 3s linear; }
 
-        /* ★★★ V1.9 更新：SweetAlert 三欄式表單 ★★★ */
-        #swal-form-grid {
-            display: grid;
-            grid-template-columns: 1fr; /* 手機預設垂直 */
-            gap: 15px;
-            width: 100%;
-            margin-top: 15px;
-        }
-        @media (min-width: 768px) { /* 平板與電腦改為 3 欄 */
-            #swal-form-grid {
-                grid-template-columns: 1fr 1fr 1fr; 
-                align-items: center;
-            }
-        }
-        
-        /* 讓 SweetAlert 變寬以容納三欄 */
-        .swal-wide-popup {
-            width: 800px !important;
-            max-width: 95% !important;
-        }
-
-        /* 加大輸入框字體與內距 */
-        .swal-large-input {
-            width: 100%;
-            padding: 15px !important;
-            font-size: 1.2rem !important;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            box-sizing: border-box;
-            background: #f9fcff;
-        }
-        .swal-large-input:focus {
-            border-color: var(--jci-blue);
-            outline: none;
-        }
+        /* SweetAlert 表單 */
+        #swal-form-grid { display: grid; grid-template-columns: 1fr; gap: 15px; width: 100%; margin-top: 15px; }
+        @media (min-width: 768px) { #swal-form-grid { grid-template-columns: 1fr 1fr 1fr; align-items: center; } }
+        .swal-wide-popup { width: 800px !important; max-width: 95% !important; }
+        .swal-large-input { width: 100%; padding: 15px !important; font-size: 1.2rem !important; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; background: #f9fcff; }
+        .swal-large-input:focus { border-color: var(--jci-blue); outline: none; }
 
     </style>
 </head>
 <body>
+
+    <div id="system-lock-screen">
+        <div class="lock-card">
+            <div class="lock-icon">🔒</div>
+            <h2 style="margin: 0 0 10px 0;">系統已鎖定</h2>
+            <p style="color:#666; margin-bottom:20px;">請輸入管理員密碼以進入</p>
+            <input type="password" id="lock-password" class="styled-input" placeholder="密碼">
+            <button class="btn-gradient" onclick="unlockSystem()">登入系統</button>
+        </div>
+    </div>
 
     <div id="nav-bar">
         <div class="event-badge" onclick="goPage('home')" id="current-event-display">
@@ -256,6 +251,7 @@
             <button onclick="addNewGuest()" style="background:var(--jci-blue); color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; font-size: 1rem;">➕ 新增來賓</button>
             <button onclick="syncFromCloud()" style="background:#007bff; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size: 1rem;">☁️ 同步名單</button>
             <button onclick="exportCSV()" style="background:#28a745; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size: 1rem;">📥 匯出紀錄</button>
+            <button onclick="adminSettings()" style="background:#607d8b; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size: 1rem;">⚙️ 系統設定</button>
             <button onclick="deleteEvent()" style="background:#ffebee; color:#c62828; border:1px solid #ffcdd2; padding:12px 20px; border-radius:8px; cursor:pointer; margin-left:auto; font-size: 1rem;">🗑️ 重置活動</button>
         </div>
         <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:20px; margin-bottom:20px; overflow:hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);"><div id="reader" style="width:100%"></div></div>
@@ -300,6 +296,81 @@
         let html5QrCode = null; 
         let kioskQrCode = null; 
         let isScanning = false;
+        let systemSettings = { locked: false, password: '123' }; // 預設值
+
+        // ★★★ V2.0 系統鎖定邏輯 ★★★
+        // 1. 監聽 Firebase 設定
+        db.ref('settings').on('value', snap => {
+            if(snap.val()) {
+                systemSettings = snap.val();
+                checkSystemLock();
+            } else {
+                // 如果第一次使用，初始化資料庫設定 (預設開啟鎖定，密碼1234)
+                db.ref('settings').set({ locked: true, password: '1234' });
+            }
+        });
+
+        // 2. 檢查是否需要顯示鎖定畫面
+        function checkSystemLock() {
+            // 如果系統設定為鎖定，且本地尚未解鎖
+            if (systemSettings.locked && !sessionStorage.getItem('system_unlocked')) {
+                document.getElementById('system-lock-screen').style.display = 'flex';
+            } else {
+                document.getElementById('system-lock-screen').style.display = 'none';
+            }
+        }
+
+        // 3. 執行解鎖
+        function unlockSystem() {
+            const inputPwd = document.getElementById('lock-password').value;
+            if (inputPwd === systemSettings.password) {
+                sessionStorage.setItem('system_unlocked', 'true');
+                document.getElementById('system-lock-screen').style.display = 'none';
+                Swal.fire({ icon: 'success', title: '登入成功', timer: 1000, showConfirmButton: false });
+            } else {
+                Swal.fire('錯誤', '密碼不正確', 'error');
+            }
+        }
+
+        // 4. 管理員設定 (修改密碼 & 開關鎖)
+        function adminSettings() {
+            Swal.fire({
+                title: '⚙️ 系統設定',
+                html: `
+                    <div style="text-align:left; margin-bottom:10px;">目前狀態: ${systemSettings.locked ? '<span style="color:red;font-weight:bold;">已鎖定 (公開需密碼)</span>' : '<span style="color:green;font-weight:bold;">已公開 (免密碼)</span>'}</div>
+                    <button id="toggle-lock-btn" class="btn-gradient" style="background:${systemSettings.locked?'#4caf50':'#f44336'}; margin-bottom:20px;">
+                        ${systemSettings.locked ? '🔓 解除鎖定 (設為公開)' : '🔒 啟用鎖定 (設為私密)'}
+                    </button>
+                    <hr>
+                    <div style="text-align:left; margin-bottom:5px;">修改管理員密碼:</div>
+                    <input id="new-admin-pwd" class="swal2-input" placeholder="輸入新密碼" value="${systemSettings.password}">
+                `,
+                showCancelButton: true,
+                confirmButtonText: '儲存變更',
+                didOpen: () => {
+                    document.getElementById('toggle-lock-btn').onclick = () => {
+                        // 切換鎖定狀態並存回 Firebase
+                        const newStatus = !systemSettings.locked;
+                        db.ref('settings/locked').set(newStatus);
+                        Swal.close(); // 關閉視窗讓它重整
+                        Swal.fire('成功', newStatus ? '系統已上鎖' : '系統已公開', 'success');
+                    };
+                },
+                preConfirm: () => {
+                    return document.getElementById('new-admin-pwd').value;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const newPwd = result.value;
+                    if(newPwd) {
+                        db.ref('settings/password').set(newPwd);
+                        Swal.fire('成功', '密碼已更新', 'success');
+                    }
+                }
+            });
+        }
+        // ★★★ V2.0 結束 ★★★
+
 
         db.ref('events_meta').on('value', snap => { allEvents = snap.val() || {}; renderEventList(); });
 
@@ -482,7 +553,6 @@
         }
         function ackGuest(id) { db.ref(`events_data/${currentEventId}/${id}`).update({ acked: true }); }
         
-        // ★★★ 新增來賓 (三欄式 RWD) ★★★
         function addNewGuest() {
             Swal.fire({
                 title: '新增現場來賓',
@@ -497,7 +567,7 @@
                         </select>
                     </div>
                 `,
-                customClass: { popup: 'swal-wide-popup' }, // 讓彈窗變寬
+                customClass: { popup: 'swal-wide-popup' },
                 showCancelButton: true,
                 confirmButtonText: '新增',
                 preConfirm: () => {
