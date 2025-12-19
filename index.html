@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCI 自助報到系統 V1.5</title>
+    <title>JCI 自助報到系統 V1.7</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -50,19 +50,39 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         /* --- 通用樣式 --- */
-        .login-bg { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
+        .login-bg { display: flex; align-items: center; justify-content: center; min-height: 80vh; padding: 20px; box-sizing: border-box; }
         .login-card { 
-            background: white; width: 100%; max-width: 380px; padding: 40px; 
+            background: white; width: 100%; max-width: 400px; padding: 40px; 
             border-radius: 24px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.1); 
             position: relative; overflow: hidden;
         }
-        .login-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: var(--bg-gradient); }
-        .styled-input { width: 100%; padding: 14px 16px; border: 2px solid #eee; border-radius: 12px; font-size: 1rem; margin-bottom: 20px; box-sizing: border-box;}
+        
+        /* ★★★ Logo 樣式 ★★★ */
+        .login-logo {
+            width: 80%; max-width: 250px; height: auto;
+            margin: 0 auto 20px auto; display: block;
+        }
+
+        /* ★★★ 修正 QR Code 對齊樣式 (絕對置中) ★★★ */
+        #qrcode {
+            margin-top: 25px;
+            display: flex; /* Flexbox 讓內容置中 */
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08); 
+        }
+        #qrcode img { display: block; }
+
+        .styled-input { width: 100%; padding: 14px 16px; border: 2px solid #eee; border-radius: 12px; font-size: 1rem; margin-bottom: 20px; box-sizing: border-box; text-align: center; }
         .btn-gradient { 
             width: 100%; padding: 16px; background: var(--bg-gradient); color: white; 
-            border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; 
+            border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; 
             transition: 0.3s; margin-top: 10px; box-shadow: 0 5px 15px rgba(0,151,215,0.3);
         }
+        .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,151,215,0.4); }
         
         /* --- 輸入端列表與按鈕 --- */
         .event-card { background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; }
@@ -71,14 +91,14 @@
         .guest-item.arrived { background: #f9f9f9; }
         .guest-photo-small { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #eee; margin-right: 12px; }
         
-        /* --- 輸出端牆面 (V1.2 大字版) --- */
-        #dashboard-grid { display: flex; flex-wrap: wrap; gap: 20px; padding: 10px; }
+        /* --- 輸出端牆面 --- */
+        #dashboard-grid { display: flex; flex-wrap: wrap; gap: 20px; padding: 10px; justify-content: center; }
         .vip-card { 
-            background: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
-            width: 280px; flex-grow: 1; max-width: 350px; border: 4px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: white; padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+            width: 260px; flex-grow: 1; max-width: 320px; border: 4px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .avatar { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 4px solid #f0f2f5; }
-        .vip-card.new-arrival { border-color: #ff3d00; background: #fff9c4; box-shadow: 0 0 30px rgba(255, 61, 0, 0.5); animation: distinctFlash 1.5s infinite alternate; transform: scale(1.05); z-index: 10; }
+        .avatar { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 5px solid #f0f2f5; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .vip-card.new-arrival { border-color: #ff3d00; background: #fff9c4; box-shadow: 0 0 40px rgba(255, 61, 0, 0.6); animation: distinctFlash 1.5s infinite alternate; transform: scale(1.05); z-index: 10; }
         @keyframes distinctFlash { 0% { border-color: #ff3d00; } 100% { border-color: #FFC107; } }
 
         /* --- 浮動按鈕與視窗 --- */
@@ -86,15 +106,15 @@
         #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
 
-        /* --- ★★★ 自助報到 (Kiosk) 專用樣式 ★★★ --- */
-        #kiosk-start-btn { width: 250px; height: 250px; border-radius: 50%; font-size: 2rem; background: var(--bg-gradient); color: white; border: none; box-shadow: 0 10px 40px rgba(0,151,215,0.4); cursor: pointer; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        /* --- 自助報到 (Kiosk) 專用樣式 --- */
+        #kiosk-start-btn { width: 260px; height: 260px; border-radius: 50%; font-size: 2.2rem; background: var(--bg-gradient); color: white; border: none; box-shadow: 0 15px 40px rgba(0,151,215,0.5); cursor: pointer; animation: pulse 2s infinite; font-weight: bold; letter-spacing: 2px; }
+        @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 15px 40px rgba(0,151,215,0.5); } 50% { transform: scale(1.05); box-shadow: 0 20px 50px rgba(0,151,215,0.7); } 100% { transform: scale(1); box-shadow: 0 15px 40px rgba(0,151,215,0.5); } }
         
-        #kiosk-scanner-container { display: none; width: 100%; max-width: 500px; background: black; border-radius: 20px; overflow: hidden; margin: 0 auto; position: relative; }
+        #kiosk-scanner-container { display: none; width: 100%; max-width: 500px; background: black; border-radius: 25px; overflow: hidden; margin: 0 auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
         #kiosk-success-view { display: none; text-align: center; }
         
         /* 倒數條 */
-        .countdown-bar { height: 5px; background: #eee; width: 100%; margin-top: 20px; border-radius: 5px; overflow: hidden; }
+        .countdown-bar { height: 6px; background: #eee; width: 100%; margin-top: 25px; border-radius: 10px; overflow: hidden; }
         .countdown-fill { height: 100%; background: #28a745; width: 100%; transition: width 3s linear; }
 
     </style>
@@ -114,34 +134,34 @@
     </div>
 
     <div id="page-home" class="page active">
-        <h2 style="color:#333;">📅 活動列表</h2>
-        <div id="event-list">載入中...</div>
+        <h2 style="color:#333; text-align: center;">📅 活動列表</h2>
+        <div id="event-list" style="max-width: 600px; margin: 0 auto;">載入中...</div>
         <div class="fab" onclick="createNewEvent()">+</div>
         <div style="text-align:center; margin-top:40px;">
-            <button onclick="showSiteQR()" style="background:white; border:1px solid #ddd; padding:10px 20px; border-radius:30px; cursor:pointer; font-weight:bold; color:#555;">📱 顯示入場 QR</button>
+            <button onclick="showSiteQR()" style="background:white; border:1px solid #ddd; padding:12px 25px; border-radius:30px; cursor:pointer; font-weight:bold; color:#555; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">📱 顯示入場 QR</button>
         </div>
     </div>
 
     <div id="page-member" class="page">
         <div class="login-bg">
             <div class="login-card">
-                <div style="font-size:3rem; margin-bottom:10px;">🎫</div>
-                <div class="login-title">會員領證</div>
-                <div class="login-subtitle">輸入資料獲取通行證</div>
+                <img src="https://lh3.googleusercontent.com/d/1XbUrBBqLrGL3wceODZl790Bk1oGTp3do" alt="JCI Dayuan Logo" class="login-logo">
                 
-                <div id="login-form">
-                    <input type="text" id="login-id" class="styled-input" placeholder="身分證字號">
-                    <input type="text" id="login-dob" class="styled-input" placeholder="生日 (如:19920101)">
+                <div id="login-form" style="margin-top: 30px;">
+                    <input type="text" id="login-id" class="styled-input" placeholder="身分證字號 (英文字母大寫)">
+                    <input type="text" id="login-dob" class="styled-input" placeholder="生日 (例如: 19920101)">
                     <button id="btn-verify" class="btn-gradient" onclick="verifyWithGoogle()">領取通行證</button>
                 </div>
                 
-                <div id="pass-area" style="display:none; margin-top:20px;">
-                    <img id="pass-photo" class="avatar" style="width:100px; height:100px;" src="">
-                    <div id="pass-name" style="font-weight:bold; font-size:1.5rem;"></div>
-                    <div id="pass-title" style="color:#888;"></div>
-                    <div id="qrcode" style="margin-top:10px;"></div>
-                    <div style="margin-top:10px; font-size:0.8rem; color:#666;">請截圖保存</div>
-                    <button onclick="location.reload()" style="background:none; border:none; color:#999; margin-top:10px; cursor:pointer; text-decoration:underline;">重新領取</button>
+                <div id="pass-area" style="display:none; margin-top:30px; animation: fadeIn 0.5s;">
+                    <img id="pass-photo" class="avatar" style="width:130px; height:130px;" src="">
+                    <div id="pass-name" style="font-weight:bold; font-size:1.8rem; margin-top: 10px; color: var(--jci-dark);"></div>
+                    <div id="pass-title" style="color:#888; font-size: 1.1rem;"></div>
+                    
+                    <div id="qrcode"></div>
+                    
+                    <div style="margin-top:15px; font-size:0.9rem; color:#666; background: #f8f9fa; padding: 8px; border-radius: 8px;">請截圖保存此畫面</div>
+                    <button onclick="location.reload()" style="background:none; border:none; color:#999; margin-top:20px; cursor:pointer; text-decoration:underline; font-size: 0.9rem;">重新領取</button>
                 </div>
             </div>
         </div>
@@ -150,56 +170,58 @@
     <div id="page-kiosk" class="page">
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh;">
             
-            <div id="kiosk-standby">
+            <div id="kiosk-standby" style="text-align: center;">
+                <img src="https://lh3.googleusercontent.com/d/1XbUrBBqLrGL3wceODZl790Bk1oGTp3do" alt="JCI Dayuan Logo" class="login-logo" style="width: 60%; margin-bottom: 40px; opacity: 0.9;">
+                <br>
                 <button id="kiosk-start-btn" onclick="startKiosk()">開始<br>自助報到</button>
-                <div style="margin-top:20px; color:#666; font-size:1.2rem;">請點擊按鈕開啟鏡頭</div>
+                <div style="margin-top:30px; color:#666; font-size:1.3rem; font-weight: bold;">請點擊按鈕開啟鏡頭</div>
             </div>
 
             <div id="kiosk-scanner-container">
-                <div style="color:white; padding:10px; text-align:center;">請出示 QR Code</div>
+                <div style="color:white; padding:20px; text-align:center; font-size: 1.2rem; background: rgba(0,0,0,0.5);">請出示您的 QR Code</div>
                 <div id="kiosk-reader" style="width:100%;"></div>
-                <button onclick="stopKiosk()" style="width:100%; padding:20px; background:#444; color:white; border:none; cursor:pointer; font-size:1.1rem;">返回 / 取消</button>
+                <button onclick="stopKiosk()" style="width:100%; padding:20px; background:#444; color:white; border:none; cursor:pointer; font-size:1.2rem; font-weight: bold;">返回 / 取消</button>
             </div>
 
-            <div id="kiosk-success-view" class="login-card" style="width:400px;">
-                <div style="color:#28a745; font-size:5rem;">✔</div>
-                <h2 style="margin:0; font-size:2rem;">報到成功</h2>
-                <img id="kiosk-photo" class="avatar" style="width:150px; height:150px; margin-top:20px;" src="">
-                <h1 id="kiosk-name" style="color:var(--jci-blue); margin:15px 0; font-size:2.5rem;"></h1>
-                <div id="kiosk-title" style="color:#666; font-size:1.5rem;"></div>
+            <div id="kiosk-success-view" class="login-card" style="width:100%; max-width: 450px;">
+                <div style="color:#28a745; font-size:6rem; line-height: 1;">✔</div>
+                <h2 style="margin:10px 0 0 0; font-size:2.2rem; color: #28a745;">報到成功</h2>
+                <img id="kiosk-photo" class="avatar" style="width:160px; height:160px; margin-top:25px;" src="">
+                <h1 id="kiosk-name" style="color:var(--jci-blue); margin:15px 0 5px 0; font-size:2.8rem;"></h1>
+                <div id="kiosk-title" style="color:#666; font-size:1.6rem;"></div>
                 
                 <div class="countdown-bar"><div id="countdown-fill" class="countdown-fill"></div></div>
-                <p style="color:#999; margin-top:10px;">3 秒後自動返回...</p>
+                <p style="color:#999; margin-top:12px; font-size: 1rem;">3 秒後自動返回...</p>
             </div>
 
         </div>
     </div>
 
     <div id="page-reception" class="page">
-        <h2 style="margin-bottom:20px;">輸入端 (櫃台)</h2>
-        <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px;" onclick="toggleCamera()">📷 掃描 QR (後鏡頭)</button>
-        <div style="background:white; padding:15px; border-radius:10px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; border:1px solid #eee;">
-            <button onclick="addNewGuest()" style="background:var(--jci-blue); color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1;">➕ 新增來賓</button>
-            <button onclick="syncFromCloud()" style="background:#007bff; color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold;">☁️ 同步名單</button>
-            <button onclick="exportCSV()" style="background:#28a745; color:white; border:none; padding:10px 15px; border-radius:8px; cursor:pointer; font-weight:bold;">📥 匯出紀錄</button>
-            <button onclick="deleteEvent()" style="background:#ffebee; color:#c62828; border:1px solid #ffcdd2; padding:10px 15px; border-radius:8px; cursor:pointer; margin-left:auto;">🗑️ 重置</button>
+        <h2 style="margin-bottom:20px; text-align: center;">輸入端 (櫃台)</h2>
+        <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px; font-size: 1.2rem;" onclick="toggleCamera()">📷 掃描 QR (後鏡頭)</button>
+        <div style="background:white; padding:15px; border-radius:10px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; border:1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <button onclick="addNewGuest()" style="background:var(--jci-blue); color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; font-size: 1rem;">➕ 新增來賓</button>
+            <button onclick="syncFromCloud()" style="background:#007bff; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size: 1rem;">☁️ 同步名單</button>
+            <button onclick="exportCSV()" style="background:#28a745; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size: 1rem;">📥 匯出紀錄</button>
+            <button onclick="deleteEvent()" style="background:#ffebee; color:#c62828; border:1px solid #ffcdd2; padding:12px 20px; border-radius:8px; cursor:pointer; margin-left:auto; font-size: 1rem;">🗑️ 重置活動</button>
         </div>
-        <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:15px; margin-bottom:20px; overflow:hidden;"><div id="reader" style="width:100%"></div></div>
-        <div style="position:relative; margin-bottom:15px;"><input type="text" id="search-box" placeholder="🔍 搜尋名單..." class="styled-input" onkeyup="renderReception()"></div>
+        <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:20px; margin-bottom:20px; overflow:hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);"><div id="reader" style="width:100%"></div></div>
+        <div style="position:relative; margin-bottom:15px;"><input type="text" id="search-box" placeholder="🔍 搜尋姓名..." class="styled-input" style="margin-bottom: 0; font-size: 1.1rem;" onkeyup="renderReception()"></div>
         <div id="reception-list"></div>
     </div>
 
     <div id="page-dashboard" class="page" style="background-color: #222; min-height: 100vh;">
-        <h2 style="color:white; margin:0 0 20px 10px;">輸出端 (貴賓牆)</h2>
-        <div id="empty-msg" style="color:#777; text-align:center; margin-top:20%; font-size:1.5rem; display:none;">等待貴賓蒞臨...</div>
+        <h2 style="color:white; margin:0 0 30px 0; text-align: center; font-size: 2.5rem; letter-spacing: 2px;">貴賓蒞臨牆</h2>
+        <div id="empty-msg" style="color:#666; text-align:center; margin-top:20%; font-size:1.8rem; display:none; font-weight: bold;">等待貴賓蒞臨...</div>
         <div id="dashboard-grid"></div>
     </div>
 
     <div id="site-qr-modal" onclick="this.style.display='none'">
         <div id="site-qr-box" onclick="event.stopPropagation()">
-            <h2 style="margin:0 0 10px 0; color:var(--jci-blue);">會員掃碼入場</h2>
-            <div id="site-qrcode" style="margin:20px;"></div>
-            <p style="color:#666; font-size:0.9rem;">掃描此碼領取電子通行證</p>
+            <h2 style="margin:0 0 20px 0; color:var(--jci-blue);">會員掃碼入場</h2>
+            <div id="site-qrcode" style="margin:30px auto;"></div>
+            <p style="color:#666; font-size:1rem;">請掃描此碼領取電子通行證</p>
         </div>
     </div>
 
@@ -267,7 +289,7 @@
             Object.values(allEvents).sort((a,b)=>b.created-a.created).forEach(evt => {
                 const div = document.createElement('div');
                 div.className = `event-card ${evt.id === currentEventId ? 'active' : ''}`;
-                div.innerHTML = `<div><div style="font-weight:bold">${evt.name}</div><div style="font-size:0.8rem;color:#888">${new Date(evt.created).toLocaleDateString()}</div></div><button onclick="selectEvent('${evt.id}','${evt.name}')" style="background:var(--jci-blue);color:white;border:none;padding:6px 15px;border-radius:20px;cursor:pointer">進入</button>`;
+                div.innerHTML = `<div><div style="font-weight:bold; font-size: 1.1rem;">${evt.name}</div><div style="font-size:0.9rem;color:#888">${new Date(evt.created).toLocaleDateString()}</div></div><button onclick="selectEvent('${evt.id}','${evt.name}')" style="background:var(--jci-blue);color:white;border:none;padding:8px 20px;border-radius:20px;cursor:pointer; font-weight:bold;">進入活動</button>`;
                 list.appendChild(div);
             });
         }
@@ -300,7 +322,8 @@
                     document.getElementById('pass-title').innerText = d.title;
                     document.getElementById('pass-photo').src = d.photo || defaultAvatar;
                     document.getElementById('qrcode').innerHTML = '';
-                    new QRCode(document.getElementById('qrcode'), { text: d.uid, width: 180, height: 180, colorDark : "#005780" });
+                    // 修正 QR Code 尺寸和顏色
+                    new QRCode(document.getElementById('qrcode'), { text: d.uid, width: 200, height: 200, colorDark : "#005780", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
                 } else { Swal.fire("驗證失敗", "資料不符", "error"); }
             }).catch(()=> { btn.innerText="領取通行證"; btn.disabled=false; Swal.fire("連線錯誤", "請檢查網路", "error"); });
         }
@@ -313,10 +336,10 @@
 
             kioskQrCode = new Html5Qrcode("kiosk-reader");
             // 使用前鏡頭 (user)
-            kioskQrCode.start({ facingMode: "user" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onKioskScanSuccess)
+            kioskQrCode.start({ facingMode: "user" }, { fps: 10, qrbox: { width: 300, height: 300 } }, onKioskScanSuccess)
             .catch(err => {
                 console.error(err);
-                Swal.fire("無法啟動前鏡頭", "請確認權限", "error");
+                Swal.fire("無法啟動前鏡頭", "請確認權限或使用 HTTPS", "error");
                 stopKiosk();
             });
         }
