@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 自助報到系統 V2.3</title>
+    <title>JCI 自助報到系統 V2.4</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -116,7 +116,6 @@
         .countdown-bar { height: 6px; background: #eee; width: 100%; margin-top: 25px; border-radius: 10px; overflow: hidden; }
         .countdown-fill { height: 100%; background: #28a745; width: 100%; transition: width 3s linear; }
 
-        /* SweetAlert 垂直表單 */
         #swal-form-grid {
             display: grid;
             grid-template-columns: 1fr; 
@@ -227,6 +226,9 @@
             <button onclick="syncFromCloud()" style="background:#007bff; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size: 1rem;">☁️ 同步名單</button>
             <button onclick="exportCSV()" style="background:#28a745; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size: 1rem;">📥 匯出紀錄</button>
             <button onclick="adminSettings()" style="background:#607d8b; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size: 1rem;">⚙️ 系統設定</button>
+            
+            <button onclick="clearAllGuests()" style="background:#d32f2f; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size: 1rem;">🧨 清空名單</button>
+            
             <button onclick="deleteEvent()" style="background:#ffebee; color:#c62828; border:1px solid #ffcdd2; padding:12px 20px; border-radius:8px; cursor:pointer; margin-left:auto; font-size: 1rem;">🗑️ 重置活動</button>
         </div>
         <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:20px; margin-bottom:20px; overflow:hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);"><div id="reader" style="width:100%"></div></div>
@@ -475,8 +477,6 @@
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
             list.innerHTML = '';
-            
-            // ★★★ 排序邏輯：依照 order (試算表順序) 由小到大排列 ★★★
             Object.values(guestsData).sort((a,b) => (a.order || 99999) - (b.order || 99999)).forEach(g => {
                 if(search && g.name.indexOf(search) === -1) return;
                 const d = document.createElement('div');
@@ -490,7 +490,6 @@
             });
         }
 
-        // ★★★ 刪除功能 ★★★
         function deleteGuest(uid) {
             Swal.fire({
                 title: '確定刪除?',
@@ -507,6 +506,38 @@
                     Swal.fire('已刪除', '', 'success');
                 }
             })
+        }
+
+        // ★★★ V2.4 新增：一鍵清空名單 (雙重確認) ★★★
+        function clearAllGuests() {
+            if(!currentEventId) return;
+            Swal.fire({
+                title: '⚠️ 危險操作',
+                text: "確定要「清空」目前列表中的所有名單嗎？",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: '是的，清空',
+                cancelButtonText: '取消'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: '再次確認',
+                        text: "這將會刪除所有已匯入和新增的資料，且無法復原！真的要執行嗎？",
+                        icon: 'error',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        confirmButtonText: '確定清空！',
+                        cancelButtonText: '我按錯了'
+                    }).then((res2) => {
+                        if (res2.isConfirmed) {
+                            db.ref(`events_data/${currentEventId}`).remove()
+                            .then(() => Swal.fire('已清空', '名單已全部移除', 'success'));
+                        }
+                    });
+                }
+            });
         }
 
         function checkIn(id, status) {
@@ -539,7 +570,6 @@
         }
         function ackGuest(id) { db.ref(`events_data/${currentEventId}/${id}`).update({ acked: true }); }
         
-        // ★★★ 新增來賓 (強制垂直排列) ★★★
         function addNewGuest() {
             Swal.fire({
                 title: '新增現場來賓',
@@ -569,13 +599,11 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     const newId = "walkin_" + Date.now();
-                    // ★★★ 加入 order: 99999 讓手動新增者排最後 ★★★
                     db.ref(`events_data/${currentEventId}/${newId}`).set({ id: newId, name: result.value.name, title: result.value.title || '貴賓', group: result.value.group, photo: "", arrived: true, timestamp: firebase.database.ServerValue.TIMESTAMP, acked: false, order: 99999 });
                 }
             });
         }
 
-        // ★★★ 同步分流選擇 ★★★
         function syncFromCloud() {
             Swal.fire({
                 title: '請選擇同步來源',
@@ -611,7 +639,7 @@
                             photo: row.photo, 
                             arrived: false, 
                             timestamp: 0,
-                            order: row.order // ★★★ 儲存排序編號
+                            order: row.order
                         }; 
                     });
                     db.ref(`events_data/${currentEventId}`).set(newData).then(() => Swal.fire("同步成功", `已匯入 ${syncType === 'internal' ? '會內' : '全體'} 名單`, "success"));
