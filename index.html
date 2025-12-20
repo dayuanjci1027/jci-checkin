@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 自助報到系統 V2.4</title>
+    <title>JCI 自助報到系統 V2.5</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -116,6 +116,7 @@
         .countdown-bar { height: 6px; background: #eee; width: 100%; margin-top: 25px; border-radius: 10px; overflow: hidden; }
         .countdown-fill { height: 100%; background: #28a745; width: 100%; transition: width 3s linear; }
 
+        /* SweetAlert 垂直表單 */
         #swal-form-grid {
             display: grid;
             grid-template-columns: 1fr; 
@@ -232,7 +233,7 @@
             <button onclick="deleteEvent()" style="background:#ffebee; color:#c62828; border:1px solid #ffcdd2; padding:12px 20px; border-radius:8px; cursor:pointer; margin-left:auto; font-size: 1rem;">🗑️ 重置活動</button>
         </div>
         <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:20px; margin-bottom:20px; overflow:hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);"><div id="reader" style="width:100%"></div></div>
-        <div style="position:relative; margin-bottom:15px;"><input type="text" id="search-box" placeholder="🔍 搜尋姓名..." class="styled-input" style="margin-bottom: 0; font-size: 1.1rem;" onkeyup="renderReception()"></div>
+        <div style="position:relative; margin-bottom:15px;"><input type="text" id="search-box" placeholder="🔍 搜尋姓名 或 職稱..." class="styled-input" style="margin-bottom: 0; font-size: 1.1rem;" onkeyup="renderReception()"></div>
         <div id="reception-list"></div>
     </div>
 
@@ -477,10 +478,15 @@
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
             list.innerHTML = '';
+            
             Object.values(guestsData).sort((a,b) => (a.order || 99999) - (b.order || 99999)).forEach(g => {
-                if(search && g.name.indexOf(search) === -1) return;
+                
+                // ★★★ 修正: 搜尋時同時比對姓名與職稱 ★★★
+                if(search && String(g.name).indexOf(search) === -1 && String(g.title).indexOf(search) === -1) return;
+
                 const d = document.createElement('div');
                 d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
+                
                 d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${g.photo || defaultAvatar}" class="guest-photo-small"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
                 <div style="display:flex; gap:5px;">
                     <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>
@@ -508,7 +514,7 @@
             })
         }
 
-        // ★★★ V2.4 新增：一鍵清空名單 (雙重確認) ★★★
+        // 清空名單 (雙重確認)
         function clearAllGuests() {
             if(!currentEventId) return;
             Swal.fire({
