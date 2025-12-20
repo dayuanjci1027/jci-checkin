@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 自助報到系統 V2.2</title>
+    <title>JCI 自助報到系統 V2.3</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -116,10 +116,10 @@
         .countdown-bar { height: 6px; background: #eee; width: 100%; margin-top: 25px; border-radius: 10px; overflow: hidden; }
         .countdown-fill { height: 100%; background: #28a745; width: 100%; transition: width 3s linear; }
 
-        /* V2.2 垂直表單修正 */
+        /* SweetAlert 垂直表單 */
         #swal-form-grid {
             display: grid;
-            grid-template-columns: 1fr; /* 強制一欄垂直 */
+            grid-template-columns: 1fr; 
             gap: 15px;
             width: 100%;
             margin-top: 15px;
@@ -475,12 +475,12 @@
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
             list.innerHTML = '';
-            Object.values(guestsData).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).forEach(g => {
+            
+            // ★★★ 排序邏輯：依照 order (試算表順序) 由小到大排列 ★★★
+            Object.values(guestsData).sort((a,b) => (a.order || 99999) - (b.order || 99999)).forEach(g => {
                 if(search && g.name.indexOf(search) === -1) return;
                 const d = document.createElement('div');
                 d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
-                
-                // ★★★ 刪除按鈕 (紅色垃圾桶) ★★★
                 d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${g.photo || defaultAvatar}" class="guest-photo-small"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
                 <div style="display:flex; gap:5px;">
                     <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>
@@ -490,7 +490,7 @@
             });
         }
 
-        // ★★★ 刪除功能實作 ★★★
+        // ★★★ 刪除功能 ★★★
         function deleteGuest(uid) {
             Swal.fire({
                 title: '確定刪除?',
@@ -569,7 +569,8 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     const newId = "walkin_" + Date.now();
-                    db.ref(`events_data/${currentEventId}/${newId}`).set({ id: newId, name: result.value.name, title: result.value.title || '貴賓', group: result.value.group, photo: "", arrived: true, timestamp: firebase.database.ServerValue.TIMESTAMP, acked: false });
+                    // ★★★ 加入 order: 99999 讓手動新增者排最後 ★★★
+                    db.ref(`events_data/${currentEventId}/${newId}`).set({ id: newId, name: result.value.name, title: result.value.title || '貴賓', group: result.value.group, photo: "", arrived: true, timestamp: firebase.database.ServerValue.TIMESTAMP, acked: false, order: 99999 });
                 }
             });
         }
@@ -601,7 +602,18 @@
                 
                 fetch(`${GOOGLE_SCRIPT_URL}?op=get_all&type=${syncType}`).then(r => r.json()).then(data => {
                     const newData = {};
-                    data.forEach(row => { newData[row.id] = { id: row.id, name: row.name, title: row.title, group: row.group, photo: row.photo, arrived: false, timestamp: 0 }; });
+                    data.forEach(row => { 
+                        newData[row.id] = { 
+                            id: row.id, 
+                            name: row.name, 
+                            title: row.title, 
+                            group: row.group, 
+                            photo: row.photo, 
+                            arrived: false, 
+                            timestamp: 0,
+                            order: row.order // ★★★ 儲存排序編號
+                        }; 
+                    });
                     db.ref(`events_data/${currentEventId}`).set(newData).then(() => Swal.fire("同步成功", `已匯入 ${syncType === 'internal' ? '會內' : '全體'} 名單`, "success"));
                 });
             });
