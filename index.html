@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 自助報到系統 V2.1</title>
+    <title>JCI 自助報到系統 V2.2</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -116,7 +116,7 @@
         .countdown-bar { height: 6px; background: #eee; width: 100%; margin-top: 25px; border-radius: 10px; overflow: hidden; }
         .countdown-fill { height: 100%; background: #28a745; width: 100%; transition: width 3s linear; }
 
-        /* ★★★ V2.1 修正：強制垂直排列 (移除 Grid RWD) ★★★ */
+        /* ★★★ V2.2 修正：強制垂直排列 (修正平板輸入問題) ★★★ */
         #swal-form-grid {
             display: grid;
             grid-template-columns: 1fr; /* 強制一欄垂直 */
@@ -490,7 +490,7 @@
                 const d = document.createElement('div');
                 d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
                 
-                // ★★★ V2.1 新增：刪除按鈕 (垃圾桶) ★★★
+                // ★★★ 2. 刪除按鈕 (紅色垃圾桶) ★★★
                 d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${g.photo || defaultAvatar}" class="guest-photo-small"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
                 <div style="display:flex; gap:5px;">
                     <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>
@@ -500,7 +500,7 @@
             });
         }
 
-        // ★★★ V2.1 新增：刪除功能 ★★★
+        // ★★★ 2. 刪除功能實作 ★★★
         function deleteGuest(uid) {
             Swal.fire({
                 title: '確定刪除?',
@@ -582,15 +582,40 @@
                 }
             });
         }
+
+        // ★★★ 1. 同步分流選擇 ★★★
         function syncFromCloud() {
-            if(!confirm("確定從 Google 雲端同步？")) return;
-            Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
-            fetch(`${GOOGLE_SCRIPT_URL}?op=get_all`).then(r => r.json()).then(data => {
-                const newData = {};
-                data.forEach(row => { newData[row.id] = { id: row.id, name: row.name, title: row.title, group: row.group, photo: row.photo, arrived: false, timestamp: 0 }; });
-                db.ref(`events_data/${currentEventId}`).set(newData).then(() => Swal.fire("同步成功", `匯入 ${data.length} 筆`, "success"));
+            Swal.fire({
+                title: '請選擇同步來源',
+                text: "這將會覆蓋目前的初始名單",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '僅會內會員 (Internal)',
+                confirmButtonColor: '#0097D7', // 藍色
+                showDenyButton: true,
+                denyButtonText: '全體名單 (All Data)',
+                denyButtonColor: '#28a745', // 綠色
+                cancelButtonText: '取消'
+            }).then((result) => {
+                let syncType = '';
+                if (result.isConfirmed) {
+                    syncType = 'internal'; 
+                } else if (result.isDenied) {
+                    syncType = 'all'; 
+                } else {
+                    return; 
+                }
+
+                Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
+                
+                fetch(`${GOOGLE_SCRIPT_URL}?op=get_all&type=${syncType}`).then(r => r.json()).then(data => {
+                    const newData = {};
+                    data.forEach(row => { newData[row.id] = { id: row.id, name: row.name, title: row.title, group: row.group, photo: row.photo, arrived: false, timestamp: 0 }; });
+                    db.ref(`events_data/${currentEventId}`).set(newData).then(() => Swal.fire("同步成功", `已匯入 ${syncType === 'internal' ? '會內' : '全體'} 名單`, "success"));
+                });
             });
         }
+
         function exportCSV() {
             let eventName = "簽到表"; if (currentEventId && allEvents[currentEventId]) eventName = allEvents[currentEventId].name;
             const clean = (text) => String(text || "").replace(/,/g, ' ').replace(/\n/g, ' ').trim();
