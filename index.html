@@ -116,7 +116,7 @@
         .countdown-bar { height: 6px; background: #eee; width: 100%; margin-top: 25px; border-radius: 10px; overflow: hidden; }
         .countdown-fill { height: 100%; background: #28a745; width: 100%; transition: width 3s linear; }
 
-        /* ★★★ V2.2 修正：強制垂直排列 (修正平板輸入問題) ★★★ */
+        /* V2.2 垂直表單修正 */
         #swal-form-grid {
             display: grid;
             grid-template-columns: 1fr; /* 強制一欄垂直 */
@@ -124,18 +124,8 @@
             width: 100%;
             margin-top: 15px;
         }
-        
         .swal-wide-popup { width: 500px !important; max-width: 95% !important; }
-
-        .swal-large-input {
-            width: 100%;
-            padding: 15px !important;
-            font-size: 1.2rem !important;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            box-sizing: border-box;
-            background: #f9fcff;
-        }
+        .swal-large-input { width: 100%; padding: 15px !important; font-size: 1.2rem !important; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; background: #f9fcff; }
         .swal-large-input:focus { border-color: var(--jci-blue); outline: none; }
 
     </style>
@@ -490,7 +480,7 @@
                 const d = document.createElement('div');
                 d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
                 
-                // ★★★ 2. 刪除按鈕 (紅色垃圾桶) ★★★
+                // ★★★ 刪除按鈕 (紅色垃圾桶) ★★★
                 d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${g.photo || defaultAvatar}" class="guest-photo-small"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
                 <div style="display:flex; gap:5px;">
                     <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>
@@ -500,7 +490,7 @@
             });
         }
 
-        // ★★★ 2. 刪除功能實作 ★★★
+        // ★★★ 刪除功能實作 ★★★
         function deleteGuest(uid) {
             Swal.fire({
                 title: '確定刪除?',
@@ -549,6 +539,7 @@
         }
         function ackGuest(id) { db.ref(`events_data/${currentEventId}/${id}`).update({ acked: true }); }
         
+        // ★★★ 新增來賓 (強制垂直排列) ★★★
         function addNewGuest() {
             Swal.fire({
                 title: '新增現場來賓',
@@ -583,7 +574,7 @@
             });
         }
 
-        // ★★★ 1. 同步分流選擇 ★★★
+        // ★★★ 同步分流選擇 ★★★
         function syncFromCloud() {
             Swal.fire({
                 title: '請選擇同步來源',
