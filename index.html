@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 自助報到系統 V2.0 (系統鎖版)</title>
+    <title>JCI 自助報到系統 V2.1</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -26,12 +26,10 @@
             height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;
         }
 
-        /* --- ★★★ V2.0 新增：系統鎖定遮罩 (Lock Screen) ★★★ --- */
+        /* 系統鎖定遮罩 */
         #system-lock-screen {
-            display: none; /* 預設隱藏，由 JS 控制 */
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 1);
-            z-index: 9999; /* 蓋在所有東西上面 */
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 1); z-index: 9999;
             flex-direction: column; align-items: center; justify-content: center;
         }
         .lock-card {
@@ -40,38 +38,21 @@
         }
         .lock-icon { font-size: 4rem; color: var(--jci-dark); margin-bottom: 20px; }
 
-        /* --- 導航列 --- */
+        /* 導航列 */
         #nav-bar { 
             background: rgba(255, 255, 255, 0.98); 
             padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05); z-index: 999; position: sticky; top: 0;
-            height: 50px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05); z-index: 999; position: sticky; top: 0; height: 50px;
         }
         .hide-nav { display: none !important; }
-
-        .event-badge { 
-            background: #333; color: white; padding: 6px 15px; border-radius: 20px; 
-            font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 5px; z-index: 1001;
-        }
-
-        /* 電腦/平板選單 */
+        .event-badge { background: #333; color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 5px; z-index: 1001; }
         .nav-group { display: flex; gap: 5px; }
-        .nav-item { 
-            cursor: pointer; color: #666; font-weight: 500; padding: 8px 16px; 
-            border-radius: 20px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap;
-        }
+        .nav-item { cursor: pointer; color: #666; font-weight: 500; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; }
         .nav-item.active { background: var(--jci-blue); color: white; box-shadow: 0 2px 10px rgba(0,151,215,0.3); }
-
-        /* 手機版漢堡按鈕 */
         .mobile-menu-btn { display: none; font-size: 1.8rem; cursor: pointer; color: var(--jci-dark); z-index: 1001; user-select: none; }
-
-        /* 手機版下拉選單 */
         .mobile-dropdown {
-            display: none;
-            position: absolute; top: 70px; left: 0; width: 100%;
-            background: white; flex-direction: column;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1); border-bottom: 1px solid #eee;
-            animation: slideDown 0.3s ease;
+            display: none; position: absolute; top: 70px; left: 0; width: 100%;
+            background: white; flex-direction: column; box-shadow: 0 10px 20px rgba(0,0,0,0.1); border-bottom: 1px solid #eee; animation: slideDown 0.3s ease;
         }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -84,29 +65,20 @@
             .nav-item.active { background: #e3f2fd; color: var(--jci-blue); box-shadow: none; }
         }
 
-        /* --- 頁面切換 --- */
         .page { display: none; flex: 1; overflow-y: auto; padding: 20px; animation: fadeIn 0.4s ease-out; }
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- 通用樣式 --- */
         .login-bg { display: flex; align-items: flex-start; justify-content: center; min-height: 80vh; padding: 20px; box-sizing: border-box; }
-        .login-card { 
-            background: white; width: 100%; max-width: 400px; padding: 30px; 
-            border-radius: 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.08); 
-            position: relative; overflow: hidden; margin-top: 10px;
-        }
+        .login-card { background: white; width: 100%; max-width: 400px; padding: 30px; border-radius: 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.08); position: relative; overflow: hidden; margin-top: 10px; }
         .login-logo { width: 70%; max-width: 220px; height: auto; margin: 0 auto 15px auto; display: block; }
 
-        /* --- 領證卡片 --- */
         #pass-area { display: none; margin-top: 10px; animation: fadeIn 0.5s; }
         #pass-photo { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 5px; border: 4px solid #f0f2f5; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         #pass-name { font-weight: bold; font-size: 1.6rem; margin-top: 5px; margin-bottom: 0; color: var(--jci-dark); line-height: 1.2; }
         #pass-title { color: #888; font-size: 1rem; margin-bottom: 5px; }
-        
         #qrcode { margin: 10px auto; display: flex; justify-content: center; align-items: center; padding: 10px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: fit-content; }
         #qrcode img { display: block; }
-        
         .save-hint { font-size: 0.8rem; color: #999; background: #f8f9fa; padding: 5px 10px; border-radius: 15px; display: inline-block; margin-bottom: 5px; }
 
         .styled-input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 1rem; margin-bottom: 15px; box-sizing: border-box; text-align: center; }
@@ -121,7 +93,6 @@
             #qrcode { padding: 5px; margin-top: 5px; }
         }
 
-        /* --- 輸入端 & 輸出端 --- */
         .event-card { background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; }
         .event-card.active { background: #e3f2fd; border-color: var(--jci-blue); }
         .guest-item { background: white; padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
@@ -138,7 +109,6 @@
         #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
 
-        /* KIOSK */
         #kiosk-start-btn { width: 260px; height: 260px; border-radius: 50%; font-size: 2.2rem; background: var(--bg-gradient); color: white; border: none; box-shadow: 0 15px 40px rgba(0,151,215,0.5); cursor: pointer; animation: pulse 2s infinite; font-weight: bold; letter-spacing: 2px; }
         @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 15px 40px rgba(0,151,215,0.5); } 50% { transform: scale(1.05); box-shadow: 0 20px 50px rgba(0,151,215,0.7); } 100% { transform: scale(1); box-shadow: 0 15px 40px rgba(0,151,215,0.5); } }
         #kiosk-scanner-container { display: none; width: 100%; max-width: 500px; background: black; border-radius: 25px; overflow: hidden; margin: 0 auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
@@ -146,11 +116,26 @@
         .countdown-bar { height: 6px; background: #eee; width: 100%; margin-top: 25px; border-radius: 10px; overflow: hidden; }
         .countdown-fill { height: 100%; background: #28a745; width: 100%; transition: width 3s linear; }
 
-        /* SweetAlert 表單 */
-        #swal-form-grid { display: grid; grid-template-columns: 1fr; gap: 15px; width: 100%; margin-top: 15px; }
-        @media (min-width: 768px) { #swal-form-grid { grid-template-columns: 1fr 1fr 1fr; align-items: center; } }
-        .swal-wide-popup { width: 800px !important; max-width: 95% !important; }
-        .swal-large-input { width: 100%; padding: 15px !important; font-size: 1.2rem !important; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; background: #f9fcff; }
+        /* ★★★ V2.1 修正：強制垂直排列 (移除 Grid RWD) ★★★ */
+        #swal-form-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* 強制一欄垂直 */
+            gap: 15px;
+            width: 100%;
+            margin-top: 15px;
+        }
+        
+        .swal-wide-popup { width: 500px !important; max-width: 95% !important; }
+
+        .swal-large-input {
+            width: 100%;
+            padding: 15px !important;
+            font-size: 1.2rem !important;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            box-sizing: border-box;
+            background: #f9fcff;
+        }
         .swal-large-input:focus { border-color: var(--jci-blue); outline: none; }
 
     </style>
@@ -296,23 +281,18 @@
         let html5QrCode = null; 
         let kioskQrCode = null; 
         let isScanning = false;
-        let systemSettings = { locked: false, password: '123' }; // 預設值
+        let systemSettings = { locked: false, password: '123' };
 
-        // ★★★ V2.0 系統鎖定邏輯 ★★★
-        // 1. 監聽 Firebase 設定
         db.ref('settings').on('value', snap => {
             if(snap.val()) {
                 systemSettings = snap.val();
                 checkSystemLock();
             } else {
-                // 如果第一次使用，初始化資料庫設定 (預設開啟鎖定，密碼1234)
                 db.ref('settings').set({ locked: true, password: '1234' });
             }
         });
 
-        // 2. 檢查是否需要顯示鎖定畫面
         function checkSystemLock() {
-            // 如果系統設定為鎖定，且本地尚未解鎖
             if (systemSettings.locked && !sessionStorage.getItem('system_unlocked')) {
                 document.getElementById('system-lock-screen').style.display = 'flex';
             } else {
@@ -320,7 +300,6 @@
             }
         }
 
-        // 3. 執行解鎖
         function unlockSystem() {
             const inputPwd = document.getElementById('lock-password').value;
             if (inputPwd === systemSettings.password) {
@@ -332,7 +311,6 @@
             }
         }
 
-        // 4. 管理員設定 (修改密碼 & 開關鎖)
         function adminSettings() {
             Swal.fire({
                 title: '⚙️ 系統設定',
@@ -349,28 +327,20 @@
                 confirmButtonText: '儲存變更',
                 didOpen: () => {
                     document.getElementById('toggle-lock-btn').onclick = () => {
-                        // 切換鎖定狀態並存回 Firebase
                         const newStatus = !systemSettings.locked;
                         db.ref('settings/locked').set(newStatus);
-                        Swal.close(); // 關閉視窗讓它重整
+                        Swal.close();
                         Swal.fire('成功', newStatus ? '系統已上鎖' : '系統已公開', 'success');
                     };
                 },
-                preConfirm: () => {
-                    return document.getElementById('new-admin-pwd').value;
-                }
+                preConfirm: () => { return document.getElementById('new-admin-pwd').value; }
             }).then((result) => {
                 if (result.isConfirmed) {
                     const newPwd = result.value;
-                    if(newPwd) {
-                        db.ref('settings/password').set(newPwd);
-                        Swal.fire('成功', '密碼已更新', 'success');
-                    }
+                    if(newPwd) { db.ref('settings/password').set(newPwd); Swal.fire('成功', '密碼已更新', 'success'); }
                 }
             });
         }
-        // ★★★ V2.0 結束 ★★★
-
 
         db.ref('events_meta').on('value', snap => { allEvents = snap.val() || {}; renderEventList(); });
 
@@ -519,10 +489,36 @@
                 if(search && g.name.indexOf(search) === -1) return;
                 const d = document.createElement('div');
                 d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
-                d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${g.photo || defaultAvatar}" class="guest-photo-small"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div><button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>`;
+                
+                // ★★★ V2.1 新增：刪除按鈕 (垃圾桶) ★★★
+                d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${g.photo || defaultAvatar}" class="guest-photo-small"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
+                <div style="display:flex; gap:5px;">
+                    <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>
+                    <button onclick="deleteGuest('${g.id}')" style="padding:6px 10px;border:none;border-radius:50%;background:#ffebee;color:#c62828;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑️</button>
+                </div>`;
                 list.appendChild(d);
             });
         }
+
+        // ★★★ V2.1 新增：刪除功能 ★★★
+        function deleteGuest(uid) {
+            Swal.fire({
+                title: '確定刪除?',
+                text: "刪除後無法復原",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: '刪除',
+                cancelButtonText: '取消'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    db.ref(`events_data/${currentEventId}/${uid}`).remove();
+                    Swal.fire('已刪除', '', 'success');
+                }
+            })
+        }
+
         function checkIn(id, status) {
             db.ref(`events_data/${currentEventId}/${id}`).update({ arrived: status, timestamp: status ? firebase.database.ServerValue.TIMESTAMP : 0, acked: status ? false : null });
         }
