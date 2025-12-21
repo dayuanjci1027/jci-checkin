@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 自助報到系統 V2.2</title>
+    <title>JCI 自助報到系統 V2.4</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -481,26 +481,28 @@
             isScanning = false;
         }
 
+        // ★★★ 修正排序邏輯：依照「試算表原始順序」 (originalIndex) 排序 ★★★
         function renderReception() {
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
             list.innerHTML = '';
-            Object.values(guestsData).sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)).forEach(g => {
-                if(search && g.name.indexOf(search) === -1) return;
-                const d = document.createElement('div');
-                d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
-                
-                // 刪除按鈕
-                d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${g.photo || defaultAvatar}" class="guest-photo-small"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
-                <div style="display:flex; gap:5px;">
-                    <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>
-                    <button onclick="deleteGuest('${g.id}')" style="padding:6px 10px;border:none;border-radius:50%;background:#ffebee;color:#c62828;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑️</button>
-                </div>`;
-                list.appendChild(d);
-            });
+            
+            // 使用 originalIndex 進行排序，確保跟 Excel 一樣
+            Object.values(guestsData)
+                .sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0))
+                .forEach(g => {
+                    if(search && g.name.indexOf(search) === -1) return;
+                    const d = document.createElement('div');
+                    d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
+                    d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${g.photo || defaultAvatar}" class="guest-photo-small"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
+                    <div style="display:flex; gap:5px;">
+                        <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>
+                        <button onclick="deleteGuest('${g.id}')" style="padding:6px 10px;border:none;border-radius:50%;background:#ffebee;color:#c62828;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑️</button>
+                    </div>`;
+                    list.appendChild(d);
+                });
         }
 
-        // 刪除功能
         function deleteGuest(uid) {
             Swal.fire({
                 title: '確定刪除?',
@@ -523,17 +525,13 @@
             db.ref(`events_data/${currentEventId}/${id}`).update({ arrived: status, timestamp: status ? firebase.database.ServerValue.TIMESTAMP : 0, acked: status ? false : null });
         }
 
-        // ★★★ V2.2 關鍵修正：同時支援 Official 和 Officials ★★★
         function renderDashboard() {
             const grid = document.getElementById('dashboard-grid');
             const emptyMsg = document.getElementById('empty-msg');
             grid.innerHTML = '';
             let list = Object.values(guestsData).filter(g => {
                 if (!g.arrived) return false;
-                
-                // 這裡加入了 'Officials' 的判斷
                 if (g.group === 'External' || g.group === 'Official' || g.group === 'Officials') return true;
-                
                 if ((g.group === 'Internal' || g.group === 'internal') && g.title) {
                       if (g.title.indexOf('會長') > -1 || g.title.indexOf('主席') > -1) return true;
                 }
@@ -583,28 +581,71 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     const newId = "walkin_" + Date.now();
-                    db.ref(`events_data/${currentEventId}/${newId}`).set({ id: newId, name: result.value.name, title: result.value.title || '貴賓', group: result.value.group, photo: "", arrived: true, timestamp: firebase.database.ServerValue.TIMESTAMP, acked: false });
+                    // 新增的來賓強制排在最後面 (index = 999999)
+                    db.ref(`events_data/${currentEventId}/${newId}`).set({ id: newId, name: result.value.name, title: result.value.title || '貴賓', group: result.value.group, photo: "", arrived: true, timestamp: firebase.database.ServerValue.TIMESTAMP, acked: false, originalIndex: 999999 });
                 }
             });
         }
+
+        // ★★★ V2.4 補回：選擇同步來源 (分流同步) 並且加上 Index ★★★
         function syncFromCloud() {
-            if(!confirm("確定從 Google 雲端同步？")) return;
-            Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
-            fetch(`${GOOGLE_SCRIPT_URL}?op=get_all`).then(r => r.json()).then(data => {
-                const newData = {};
-                data.forEach(row => { newData[row.id] = { id: row.id, name: row.name, title: row.title, group: row.group, photo: row.photo, arrived: false, timestamp: 0 }; });
-                db.ref(`events_data/${currentEventId}`).set(newData).then(() => Swal.fire("同步成功", `匯入 ${data.length} 筆`, "success"));
+            Swal.fire({
+                title: '請選擇同步來源',
+                text: "這將會覆蓋目前的初始名單",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '僅會內會員 (Internal)',
+                confirmButtonColor: '#0097D7', 
+                showDenyButton: true,
+                denyButtonText: '全體名單 (All Data)',
+                denyButtonColor: '#28a745', 
+                cancelButtonText: '取消'
+            }).then((result) => {
+                if (result.isDismissed) return; // 按取消
+
+                const onlyInternal = result.isConfirmed; // True = 藍色按鈕 (僅會員)
+                
+                Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
+                
+                fetch(`${GOOGLE_SCRIPT_URL}?op=get_all`).then(r => r.json()).then(data => {
+                    const newData = {};
+                    let count = 0;
+                    
+                    data.forEach((row, index) => {
+                        // 如果選「僅會員」，則只匯入 group 為 internal 或 Internal 的
+                        if (onlyInternal && row.group.toLowerCase() !== 'internal') return;
+
+                        newData[row.id] = { 
+                            id: row.id, 
+                            name: row.name, 
+                            title: row.title, 
+                            group: row.group, 
+                            photo: row.photo, 
+                            arrived: false, 
+                            timestamp: 0,
+                            originalIndex: index // ★ 關鍵：把試算表的順序存下來
+                        };
+                        count++;
+                    });
+                    
+                    db.ref(`events_data/${currentEventId}`).set(newData).then(() => Swal.fire("同步成功", `匯入 ${count} 筆`, "success"));
+                });
             });
         }
+
         function exportCSV() {
             let eventName = "簽到表"; if (currentEventId && allEvents[currentEventId]) eventName = allEvents[currentEventId].name;
             const clean = (text) => String(text || "").replace(/,/g, ' ').replace(/\n/g, ' ').trim();
             let csv = "\uFEFF姓名,職稱,分類,簽到狀態,報到時間\n";
-            Object.values(guestsData).forEach(g => {
-                let statusStr = "", timeStr = "";
-                if (g.arrived) { statusStr = "已到"; if (g.timestamp) { let d = new Date(g.timestamp); const pad = (n) => (n < 10 ? '0' + n : n); timeStr = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; } }
-                csv += `${clean(g.name)},${clean(g.title)},${clean(g.group)},${statusStr},${timeStr}\n`;
-            });
+            
+            // 匯出時也依照原始順序
+            Object.values(guestsData)
+                .sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0))
+                .forEach(g => {
+                    let statusStr = "", timeStr = "";
+                    if (g.arrived) { statusStr = "已到"; if (g.timestamp) { let d = new Date(g.timestamp); const pad = (n) => (n < 10 ? '0' + n : n); timeStr = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; } }
+                    csv += `${clean(g.name)},${clean(g.title)},${clean(g.group)},${statusStr},${timeStr}\n`;
+                });
             const l = document.createElement("a"); l.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); l.download = eventName + ".csv"; l.click();
         }
         function deleteEvent() {
