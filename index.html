@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 自助報到系統 V2.9</title>
+    <title>JCI 自助報到系統 V2.10</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -289,6 +289,14 @@
         const db = firebase.database();
         const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/847/847969.png";
         
+        // ★★★ V2.10 新增：圖片網址整形術 (強制防快取) ★★★
+        function getPhotoUrl(url) {
+            if (!url) return defaultAvatar;
+            // 如果網址已經有參數了(有?)，就加 &，否則加 ?
+            // 最後加上當下的時間 (new Date().getTime()) 來騙過瀏覽器
+            return url + (url.indexOf('?') > -1 ? '&' : '?') + 't=' + new Date().getTime();
+        }
+
         let currentEventId = null;
         let guestsData = {};
         let allEvents = {};
@@ -469,12 +477,14 @@
             }).catch(()=> { btn.innerText="領取通行證"; btn.disabled=false; Swal.fire("連線錯誤", "請檢查網路", "error"); });
         }
 
+        // ★★★ V2.10 修改：顯示會員卡時加上強制整形 ★★★
         function showPass(d) {
             document.getElementById('login-form').style.display='none';
             document.getElementById('pass-area').style.display='block';
             document.getElementById('pass-name').innerText = d.name;
             document.getElementById('pass-title').innerText = d.title;
-            document.getElementById('pass-photo').src = d.photo || defaultAvatar;
+            // 這裡使用了 getPhotoUrl
+            document.getElementById('pass-photo').src = getPhotoUrl(d.photo);
             document.getElementById('qrcode').innerHTML = '';
             let qrSize = 200; if(window.innerWidth < 480) qrSize = 160; 
             new QRCode(document.getElementById('qrcode'), { text: d.uid, width: qrSize, height: qrSize, colorDark : "#005780", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
@@ -505,6 +515,8 @@
             document.getElementById('kiosk-standby').style.display = 'block';
             document.getElementById('kiosk-success-view').style.display = 'none';
         }
+
+        // ★★★ V2.10 修改：Kiosk 顯示照片時加上強制整形 ★★★
         function onKioskScanSuccess(uid) {
             if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
             document.getElementById('kiosk-scanner-container').style.display = 'none';
@@ -512,7 +524,8 @@
                 const g = guestsData[uid];
                 if(!g.arrived) checkIn(uid, true);
                 document.getElementById('kiosk-success-view').style.display = 'block';
-                document.getElementById('kiosk-photo').src = g.photo || defaultAvatar;
+                // 這裡使用了 getPhotoUrl
+                document.getElementById('kiosk-photo').src = getPhotoUrl(g.photo);
                 document.getElementById('kiosk-name').innerText = g.name;
                 document.getElementById('kiosk-title').innerText = g.title;
                 const fill = document.getElementById('countdown-fill');
@@ -546,12 +559,14 @@
             isScanning = true;
         }
 
+        // ★★★ V2.10 修改：櫃台掃描顯示照片時加上強制整形 ★★★
         function showReceptionResult(g, isDuplicate) {
             const overlay = document.getElementById('reception-scan-result');
             const icon = document.getElementById('scan-icon');
             const title = document.getElementById('scan-status-text');
             const fill = document.getElementById('scan-countdown-fill');
-            document.getElementById('scan-photo').src = g.photo || defaultAvatar;
+            // 這裡使用了 getPhotoUrl
+            document.getElementById('scan-photo').src = getPhotoUrl(g.photo);
             document.getElementById('scan-name').innerText = g.name;
             document.getElementById('scan-title').innerText = g.title;
             if(isDuplicate) { icon.innerText = "!"; icon.className = "status-warning"; title.innerText = "已重複報到"; title.className = "status-warning"; } 
@@ -572,6 +587,7 @@
             isScanning = false;
         }
 
+        // ★★★ V2.10 修改：輸入端列表顯示照片時加上強制整形 ★★★
         function renderReception() {
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
@@ -580,7 +596,8 @@
                 if(search && g.name.indexOf(search) === -1) return;
                 const d = document.createElement('div');
                 d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
-                d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${g.photo || defaultAvatar}" class="guest-photo-small"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
+                // 這裡使用了 getPhotoUrl
+                d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${getPhotoUrl(g.photo)}" class="guest-photo-small"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
                 <div style="display:flex; gap:5px;">
                     <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>
                     <button onclick="deleteGuest('${g.id}')" style="padding:6px 10px;border:none;border-radius:50%;background:#ffebee;color:#c62828;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑️</button>
@@ -599,6 +616,7 @@
             db.ref(`events_data/${currentEventId}/${id}`).update({ arrived: status, timestamp: status ? firebase.database.ServerValue.TIMESTAMP : 0, acked: status ? false : null });
         }
 
+        // ★★★ V2.10 修改：儀表板顯示照片時加上強制整形 ★★★
         function renderDashboard() {
             const grid = document.getElementById('dashboard-grid');
             const emptyMsg = document.getElementById('empty-msg');
@@ -620,7 +638,8 @@
                 const d = document.createElement('div');
                 let cardClass = 'vip-card'; if (!g.acked) cardClass += ' new-arrival';
                 d.className = cardClass; d.onclick = function() { ackGuest(g.id); }; d.style.cursor = "pointer";
-                d.innerHTML = `<img src="${g.photo||defaultAvatar}" class="avatar"><div style="font-weight:bold;margin-bottom:5px; font-size:2.5rem; line-height:1.2;">${g.name}</div><div style="font-size:1.5rem;color:#666;">${g.title}</div>`;
+                // 這裡使用了 getPhotoUrl
+                d.innerHTML = `<img src="${getPhotoUrl(g.photo)}" class="avatar"><div style="font-weight:bold;margin-bottom:5px; font-size:2.5rem; line-height:1.2;">${g.name}</div><div style="font-size:1.5rem;color:#666;">${g.title}</div>`;
                 grid.appendChild(d);
             });
         }
@@ -648,7 +667,6 @@
             db.ref(`events_data/${currentEventId}`).remove().then(() => Swal.fire("已清空", "名單已重置", "success"));
         }
 
-        // ★★★ V2.9 修正：加入時間戳記 (Anti-Cache) ★★★
         function syncFromCloud() {
             Swal.fire({
                 title: '請選擇同步來源', text: "這將會覆蓋目前的初始名單", icon: 'question', showCancelButton: true, confirmButtonText: '僅會內會員 (Internal)', confirmButtonColor: '#0097D7', showDenyButton: true, denyButtonText: '全體名單 (All Data)', denyButtonColor: '#28a745', cancelButtonText: '取消'
@@ -657,7 +675,7 @@
                 const onlyInternal = result.isConfirmed; 
                 Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
                 
-                // 這裡加入了 &_t=時間戳記
+                // 保留 V2.9 的時間戳記防止快取
                 fetch(`${GOOGLE_SCRIPT_URL}?op=get_all&_t=${new Date().getTime()}`).then(r => r.json()).then(data => {
                     const newData = {};
                     let count = 0;
