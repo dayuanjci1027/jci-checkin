@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 自助報到系統 V2.5</title>
+    <title>JCI 自助報到系統 V2.6</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -93,9 +93,26 @@
             #qrcode { padding: 5px; margin-top: 5px; }
         }
 
-        /* 介面整合修正：按鈕容器 */
-        .event-card { background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; }
+        /* ★★★ V2.6 修正1：活動列表 CSS 優化 (防止按鈕跑版) ★★★ */
+        .event-card { 
+            background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; 
+            gap: 15px; /* 文字與按鈕間距 */
+        }
         .event-card.active { background: #e3f2fd; border-color: var(--jci-blue); }
+        .event-info { 
+            flex: 1; /* 佔滿剩餘空間 */
+            min-width: 0; /* 允許文字換行 */
+            text-align: left;
+        }
+        .event-btn {
+            flex-shrink: 0; /* 按鈕不縮小 */
+            white-space: nowrap; /* 文字不換行 */
+            background: var(--jci-blue); color: white; border: none; padding: 8px 20px; 
+            border-radius: 20px; cursor: pointer; font-weight: bold;
+        }
+
         .guest-item { background: white; padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .guest-item.arrived { background: #f9f9f9; }
         .guest-photo-small { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #eee; margin-right: 12px; }
@@ -139,7 +156,6 @@
         }
         .swal-large-input:focus { border-color: var(--jci-blue); outline: none; }
 
-        /* V2.5 新增：設定選單內的按鈕樣式 */
         .settings-btn-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -159,6 +175,21 @@
         }
         .settings-action-btn:active { transform: scale(0.98); }
 
+        /* ★★★ V2.6 新增：輸入端掃描結果遮罩 (仿 Kiosk) ★★★ */
+        #reception-scan-result {
+            display: none; /* 預設隱藏 */
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            z-index: 99999;
+            flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
+        }
+        .result-content { max-width: 400px; width: 90%; }
+        /* 成功綠色 */
+        .status-success { color: #28a745; }
+        /* 重複黃色 */
+        .status-warning { color: #ffc107; }
+
     </style>
 </head>
 <body>
@@ -170,6 +201,20 @@
             <p style="color:#666; margin-bottom:20px;">請輸入管理員密碼以進入</p>
             <input type="password" id="lock-password" class="styled-input" placeholder="密碼">
             <button class="btn-gradient" onclick="unlockSystem()">登入系統</button>
+        </div>
+    </div>
+
+    <div id="reception-scan-result">
+        <div class="result-content">
+            <div id="scan-icon" style="font-size: 5rem; line-height: 1;">✔</div>
+            <h2 id="scan-status-text" style="margin:10px 0 0 0; font-size:2rem;">報到成功</h2>
+            
+            <img id="scan-photo" class="avatar" style="width:150px; height:150px; margin-top:25px;" src="">
+            <h1 id="scan-name" style="color:var(--jci-blue); margin:15px 0 5px 0; font-size:2.5rem;"></h1>
+            <div id="scan-title" style="color:#666; font-size:1.5rem;"></div>
+
+            <div class="countdown-bar"><div id="scan-countdown-fill" class="countdown-fill"></div></div>
+            <p style="color:#999; margin-top:12px;">3 秒後自動返回...</p>
         </div>
     </div>
 
@@ -301,6 +346,7 @@
         let html5QrCode = null; 
         let kioskQrCode = null; 
         let isScanning = false;
+        let isScanningProcessing = false; // ★★★ V2.6 新增：防止重複掃描的鎖 ★★★
         let systemSettings = { locked: false, password: '123' };
 
         db.ref('settings').on('value', snap => {
@@ -331,7 +377,6 @@
             }
         }
 
-        // ★★★ V2.5 改寫：整合式系統設定選單 ★★★
         function adminSettings() {
             Swal.fire({
                 title: '⚙️ 系統設定',
@@ -340,7 +385,6 @@
                     <button id="toggle-lock-btn" class="btn-gradient" style="background:${systemSettings.locked?'#4caf50':'#f44336'}; margin-bottom:15px; padding:10px;">
                         ${systemSettings.locked ? '🔓 解除鎖定 (設為公開)' : '🔒 啟用鎖定 (設為私密)'}
                     </button>
-                    
                     <hr>
                     <h3 style="font-size:1rem; color:#666; margin:15px 0 10px; text-align:left;">📦 資料管理</h3>
                     <div class="settings-btn-grid">
@@ -349,7 +393,6 @@
                         <button id="btn-clear" class="settings-action-btn" style="background:#ff9800;">⚠️ 清空名單</button>
                         <button id="btn-del-evt" class="settings-action-btn" style="background:#d32f2f;">🗑️ 刪除活動</button>
                     </div>
-
                     <hr>
                     <div style="text-align:left; margin-bottom:5px;">修改管理員密碼:</div>
                     <input id="new-admin-pwd" class="swal2-input" placeholder="輸入新密碼" value="${systemSettings.password}">
@@ -357,17 +400,14 @@
                 showCancelButton: true,
                 confirmButtonText: '儲存變更',
                 didOpen: () => {
-                    // 綁定鎖定按鈕
                     document.getElementById('toggle-lock-btn').onclick = () => {
                         const newStatus = !systemSettings.locked;
                         db.ref('settings/locked').set(newStatus);
                         Swal.close();
                         Swal.fire('成功', newStatus ? '系統已上鎖' : '系統已公開', 'success');
                     };
-
-                    // 綁定資料管理按鈕
                     document.getElementById('btn-sync').onclick = () => { Swal.close(); syncFromCloud(); };
-                    document.getElementById('btn-export').onclick = () => { exportCSV(); }; // 匯出不一定要關閉視窗，但為了保持邏輯一致性
+                    document.getElementById('btn-export').onclick = () => { exportCSV(); };
                     document.getElementById('btn-clear').onclick = () => { Swal.close(); clearGuestList(); };
                     document.getElementById('btn-del-evt').onclick = () => { Swal.close(); deleteEvent(); };
                 },
@@ -420,16 +460,26 @@
                 }
             });
         }
+
+        // ★★★ V2.6 修正：渲染活動列表 (結構優化，防止按鈕跑版) ★★★
         function renderEventList() {
             const list = document.getElementById('event-list');
             list.innerHTML = '';
             Object.values(allEvents).sort((a,b)=>b.created-a.created).forEach(evt => {
                 const div = document.createElement('div');
                 div.className = `event-card ${evt.id === currentEventId ? 'active' : ''}`;
-                div.innerHTML = `<div><div style="font-weight:bold; font-size: 1.1rem;">${evt.name}</div><div style="font-size:0.9rem;color:#888">${new Date(evt.created).toLocaleDateString()}</div></div><button onclick="selectEvent('${evt.id}','${evt.name}')" style="background:var(--jci-blue);color:white;border:none;padding:8px 20px;border-radius:20px;cursor:pointer; font-weight:bold;">進入活動</button>`;
+                // 使用新的 event-info 與 event-btn 類別
+                div.innerHTML = `
+                    <div class="event-info">
+                        <div style="font-weight:bold; font-size: 1.1rem; margin-bottom: 5px;">${evt.name}</div>
+                        <div style="font-size:0.9rem;color:#888">${new Date(evt.created).toLocaleDateString()}</div>
+                    </div>
+                    <button class="event-btn" onclick="selectEvent('${evt.id}','${evt.name}')">進入活動</button>
+                `;
                 list.appendChild(div);
             });
         }
+
         function selectEvent(id, name) {
             currentEventId = id;
             document.getElementById('current-event-display').innerHTML = `<span>📅</span> ${name}`;
@@ -496,30 +546,101 @@
         }
 
         function toggleCamera() { isScanning ? stopCamera() : startCamera(); }
+        
+        // ★★★ V2.6 修正2：輸入端掃描邏輯優化 (防重複、倒數遮罩) ★★★
         function startCamera() {
             document.getElementById('scanner-view').style.display = 'block';
             document.getElementById('btn-cam').innerText = "❌ 關閉相機";
             document.getElementById('btn-cam').style.background = "#333";
+            
+            isScanningProcessing = false; // 重置鎖定狀態
+
             html5QrCode = new Html5Qrcode("reader");
             html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (uid)=>{
+                // 如果正在處理中，直接略過，不執行任何動作 (防止連點)
+                if(isScanningProcessing) return; 
+
+                // 標記為處理中
+                isScanningProcessing = true;
+
                 if(guestsData[uid]) {
-                    if(!guestsData[uid].arrived) {
+                    const g = guestsData[uid];
+                    const isDuplicate = g.arrived;
+
+                    // 如果尚未報到，執行報到
+                    if(!isDuplicate) {
                         checkIn(uid, true);
-                        Swal.fire({ icon: 'success', title: guestsData[uid].name, text: '簽到成功', timer: 1000, showConfirmButton: false });
-                    } else { Swal.fire("重複", "已入場", "warning"); }
-                } else { Swal.fire("錯誤", "非本場名單", "error"); }
+                    }
+
+                    // 呼叫顯示結果遮罩 (成功或重複)
+                    showReceptionResult(g, isDuplicate);
+
+                    // 3秒後自動關閉遮罩並解鎖，允許下一次掃描
+                    setTimeout(() => {
+                        closeReceptionResult();
+                        isScanningProcessing = false;
+                    }, 3000);
+
+                } else {
+                    // 掃到無效 QR，顯示短暫錯誤提示，然後解鎖
+                    Swal.fire({ icon: 'error', title: '錯誤', text: '非本場名單', timer: 1500, showConfirmButton: false })
+                    .then(() => {
+                        isScanningProcessing = false;
+                    });
+                }
             });
             isScanning = true;
         }
+
+        function showReceptionResult(g, isDuplicate) {
+            const overlay = document.getElementById('reception-scan-result');
+            const icon = document.getElementById('scan-icon');
+            const title = document.getElementById('scan-status-text');
+            const fill = document.getElementById('scan-countdown-fill');
+
+            // 設定內容
+            document.getElementById('scan-photo').src = g.photo || defaultAvatar;
+            document.getElementById('scan-name').innerText = g.name;
+            document.getElementById('scan-title').innerText = g.title;
+
+            // 依狀態改變樣式
+            if(isDuplicate) {
+                icon.innerText = "!";
+                icon.className = "status-warning";
+                title.innerText = "已重複報到";
+                title.className = "status-warning";
+            } else {
+                icon.innerText = "✔";
+                icon.className = "status-success";
+                title.innerText = "報到成功";
+                title.className = "status-success";
+            }
+
+            // 顯示遮罩
+            overlay.style.display = 'flex';
+
+            // 執行倒數動畫
+            fill.style.transition = 'none'; 
+            fill.style.width = '100%';
+            setTimeout(() => { 
+                fill.style.transition = 'width 3s linear'; 
+                fill.style.width = '0%'; 
+            }, 50);
+        }
+
+        function closeReceptionResult() {
+            document.getElementById('reception-scan-result').style.display = 'none';
+        }
+
         function stopCamera() {
             if(html5QrCode) { html5QrCode.stop().then(()=>{ html5QrCode.clear(); html5QrCode = null; }); }
             document.getElementById('scanner-view').style.display = 'none';
             document.getElementById('btn-cam').innerText = "📷 掃描 QR (後鏡頭)";
             document.getElementById('btn-cam').style.background = "linear-gradient(45deg, #ff5722, #ff9800)";
+            document.getElementById('reception-scan-result').style.display = 'none'; // 確保遮罩關閉
             isScanning = false;
         }
 
-        // 排序邏輯：依照 originalIndex
         function renderReception() {
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
@@ -623,14 +744,12 @@
             });
         }
 
-        // V2.5 新增：清空名單 (保留活動)
         function clearGuestList() {
             if(!confirm("確定清空所有名單？活動將保留，但簽到資料會消失。")) return;
             db.ref(`events_data/${currentEventId}`).remove()
               .then(() => Swal.fire("已清空", "名單已重置", "success"));
         }
 
-        // 分流同步功能
         function syncFromCloud() {
             Swal.fire({
                 title: '請選擇同步來源',
@@ -645,30 +764,19 @@
                 cancelButtonText: '取消'
             }).then((result) => {
                 if (result.isDismissed) return; 
-
                 const onlyInternal = result.isConfirmed; 
-                
                 Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
-                
                 fetch(`${GOOGLE_SCRIPT_URL}?op=get_all`).then(r => r.json()).then(data => {
                     const newData = {};
                     let count = 0;
-                    
                     data.forEach((row, index) => {
                         if (onlyInternal && row.group.toLowerCase() !== 'internal') return;
                         newData[row.id] = { 
-                            id: row.id, 
-                            name: row.name, 
-                            title: row.title, 
-                            group: row.group, 
-                            photo: row.photo, 
-                            arrived: false, 
-                            timestamp: 0,
-                            originalIndex: index 
+                            id: row.id, name: row.name, title: row.title, group: row.group, photo: row.photo, 
+                            arrived: false, timestamp: 0, originalIndex: index 
                         };
                         count++;
                     });
-                    
                     db.ref(`events_data/${currentEventId}`).set(newData).then(() => Swal.fire("同步成功", `匯入 ${count} 筆`, "success"));
                 });
             });
