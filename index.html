@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 自助報到系統 V2.6</title>
+    <title>JCI 自助報到系統 V2.8</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -93,25 +93,15 @@
             #qrcode { padding: 5px; margin-top: 5px; }
         }
 
-        /* ★★★ V2.6 修正1：活動列表 CSS 優化 (防止按鈕跑版) ★★★ */
         .event-card { 
             background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; 
             display: flex; justify-content: space-between; align-items: center; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; 
-            gap: 15px; /* 文字與按鈕間距 */
+            gap: 15px; 
         }
         .event-card.active { background: #e3f2fd; border-color: var(--jci-blue); }
-        .event-info { 
-            flex: 1; /* 佔滿剩餘空間 */
-            min-width: 0; /* 允許文字換行 */
-            text-align: left;
-        }
-        .event-btn {
-            flex-shrink: 0; /* 按鈕不縮小 */
-            white-space: nowrap; /* 文字不換行 */
-            background: var(--jci-blue); color: white; border: none; padding: 8px 20px; 
-            border-radius: 20px; cursor: pointer; font-weight: bold;
-        }
+        .event-info { flex: 1; min-width: 0; text-align: left; }
+        .event-btn { flex-shrink: 0; white-space: nowrap; background: var(--jci-blue); color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-weight: bold; }
 
         .guest-item { background: white; padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .guest-item.arrived { background: #f9f9f9; }
@@ -134,60 +124,18 @@
         .countdown-bar { height: 6px; background: #eee; width: 100%; margin-top: 25px; border-radius: 10px; overflow: hidden; }
         .countdown-fill { height: 100%; background: #28a745; width: 100%; transition: width 3s linear; }
 
-        /* SweetAlert 表單 (強制一欄垂直) */
-        #swal-form-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 15px;
-            width: 100%;
-            margin-top: 15px;
-        }
-        
+        #swal-form-grid { display: grid; grid-template-columns: 1fr; gap: 15px; width: 100%; margin-top: 15px; }
         .swal-wide-popup { width: 500px !important; max-width: 95% !important; }
-
-        .swal-large-input {
-            width: 100%;
-            padding: 15px !important;
-            font-size: 1.2rem !important;
-            border: 2px solid #eee;
-            border-radius: 10px;
-            box-sizing: border-box;
-            background: #f9fcff;
-        }
+        .swal-large-input { width: 100%; padding: 15px !important; font-size: 1.2rem !important; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; background: #f9fcff; }
         .swal-large-input:focus { border-color: var(--jci-blue); outline: none; }
 
-        .settings-btn-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 15px;
-        }
-        .settings-action-btn {
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-            font-size: 0.95rem;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
-        }
+        .settings-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+        .settings-action-btn { border: none; padding: 12px; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; font-size: 0.95rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; }
         .settings-action-btn:active { transform: scale(0.98); }
 
-        /* ★★★ V2.6 新增：輸入端掃描結果遮罩 (仿 Kiosk) ★★★ */
-        #reception-scan-result {
-            display: none; /* 預設隱藏 */
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.98);
-            z-index: 99999;
-            flex-direction: column; align-items: center; justify-content: center;
-            text-align: center;
-        }
+        #reception-scan-result { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.98); z-index: 99999; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
         .result-content { max-width: 400px; width: 90%; }
-        /* 成功綠色 */
         .status-success { color: #28a745; }
-        /* 重複黃色 */
         .status-warning { color: #ffc107; }
 
     </style>
@@ -201,6 +149,9 @@
             <p style="color:#666; margin-bottom:20px;">請輸入管理員密碼以進入</p>
             <input type="password" id="lock-password" class="styled-input" placeholder="密碼">
             <button class="btn-gradient" onclick="unlockSystem()">登入系統</button>
+            <div style="margin-top:20px; cursor:pointer; text-decoration:underline; color:var(--jci-blue); font-weight:bold;" onclick="goPage('member')">
+                我是會員，前往領證
+            </div>
         </div>
     </div>
 
@@ -208,11 +159,9 @@
         <div class="result-content">
             <div id="scan-icon" style="font-size: 5rem; line-height: 1;">✔</div>
             <h2 id="scan-status-text" style="margin:10px 0 0 0; font-size:2rem;">報到成功</h2>
-            
             <img id="scan-photo" class="avatar" style="width:150px; height:150px; margin-top:25px;" src="">
             <h1 id="scan-name" style="color:var(--jci-blue); margin:15px 0 5px 0; font-size:2.5rem;"></h1>
             <div id="scan-title" style="color:#666; font-size:1.5rem;"></div>
-
             <div class="countdown-bar"><div id="scan-countdown-fill" class="countdown-fill"></div></div>
             <p style="color:#999; margin-top:12px;">3 秒後自動返回...</p>
         </div>
@@ -262,7 +211,7 @@
                     <div id="qrcode"></div>
                     <div class="save-hint">請截圖保存</div>
                     <br>
-                    <button onclick="location.reload()" style="background:none; border:none; color:#999; margin-top:10px; cursor:pointer; text-decoration:underline; font-size: 0.9rem;">重新領取</button>
+                    <button onclick="logoutMember()" style="background:none; border:none; color:#999; margin-top:10px; cursor:pointer; text-decoration:underline; font-size: 0.9rem;">登出 / 切換帳號</button>
                 </div>
             </div>
         </div>
@@ -346,7 +295,7 @@
         let html5QrCode = null; 
         let kioskQrCode = null; 
         let isScanning = false;
-        let isScanningProcessing = false; // ★★★ V2.6 新增：防止重複掃描的鎖 ★★★
+        let isScanningProcessing = false;
         let systemSettings = { locked: false, password: '123' };
 
         db.ref('settings').on('value', snap => {
@@ -359,11 +308,21 @@
         });
 
         function checkSystemLock() {
-            if (systemSettings.locked && !sessionStorage.getItem('system_unlocked')) {
-                document.getElementById('system-lock-screen').style.display = 'flex';
-            } else {
+            if (!systemSettings.locked || sessionStorage.getItem('system_unlocked')) {
                 document.getElementById('system-lock-screen').style.display = 'none';
+                return;
             }
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('mode') === 'entry') {
+                 document.getElementById('system-lock-screen').style.display = 'none';
+                 return;
+            }
+            const memberPage = document.getElementById('page-member');
+            if (memberPage && memberPage.classList.contains('active')) {
+                 document.getElementById('system-lock-screen').style.display = 'none';
+                 return;
+            }
+            document.getElementById('system-lock-screen').style.display = 'flex';
         }
 
         function unlockSystem() {
@@ -427,6 +386,8 @@
             if (urlParams.get('mode') === 'entry') {
                 document.getElementById('nav-bar').classList.add('hide-nav');
                 goPage('member');
+                // ★★★ V2.8 自動登入檢查 ★★★
+                checkSavedPass();
             }
         };
 
@@ -449,6 +410,11 @@
             }
             if(p !== 'reception') stopCamera(); 
             if(p !== 'kiosk') stopKiosk();
+
+            checkSystemLock();
+            
+            // 如果切換到 member 頁面，也檢查是否有存檔
+            if (p === 'member') checkSavedPass();
         }
 
         function createNewEvent() {
@@ -461,14 +427,12 @@
             });
         }
 
-        // ★★★ V2.6 修正：渲染活動列表 (結構優化，防止按鈕跑版) ★★★
         function renderEventList() {
             const list = document.getElementById('event-list');
             list.innerHTML = '';
             Object.values(allEvents).sort((a,b)=>b.created-a.created).forEach(evt => {
                 const div = document.createElement('div');
                 div.className = `event-card ${evt.id === currentEventId ? 'active' : ''}`;
-                // 使用新的 event-info 與 event-btn 類別
                 div.innerHTML = `
                     <div class="event-info">
                         <div style="font-weight:bold; font-size: 1.1rem; margin-bottom: 5px;">${evt.name}</div>
@@ -492,6 +456,7 @@
             goPage('reception');
         }
 
+        // ★★★ V2.8 驗證成功後存入 localStorage ★★★
         function verifyWithGoogle() {
             const id = document.getElementById('login-id').value.trim().toUpperCase();
             const dob = document.getElementById('login-dob').value.trim();
@@ -502,16 +467,41 @@
             fetch(`${GOOGLE_SCRIPT_URL}?id=${id}&dob=${dob}`).then(r => r.json()).then(d => {
                 btn.innerText = "領取通行證"; btn.disabled = false;
                 if (d.status === 'success') {
-                    document.getElementById('login-form').style.display='none';
-                    document.getElementById('pass-area').style.display='block';
-                    document.getElementById('pass-name').innerText = d.name;
-                    document.getElementById('pass-title').innerText = d.title;
-                    document.getElementById('pass-photo').src = d.photo || defaultAvatar;
-                    document.getElementById('qrcode').innerHTML = '';
-                    let qrSize = 200; if(window.innerWidth < 480) qrSize = 160; 
-                    new QRCode(document.getElementById('qrcode'), { text: d.uid, width: qrSize, height: qrSize, colorDark : "#005780", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
+                    // 存檔
+                    localStorage.setItem('member_pass', JSON.stringify(d));
+                    showPass(d);
                 } else { Swal.fire("驗證失敗", "資料不符", "error"); }
             }).catch(()=> { btn.innerText="領取通行證"; btn.disabled=false; Swal.fire("連線錯誤", "請檢查網路", "error"); });
+        }
+
+        // ★★★ V2.8 顯示通行證的共用函數 ★★★
+        function showPass(d) {
+            document.getElementById('login-form').style.display='none';
+            document.getElementById('pass-area').style.display='block';
+            document.getElementById('pass-name').innerText = d.name;
+            document.getElementById('pass-title').innerText = d.title;
+            document.getElementById('pass-photo').src = d.photo || defaultAvatar;
+            document.getElementById('qrcode').innerHTML = '';
+            let qrSize = 200; if(window.innerWidth < 480) qrSize = 160; 
+            new QRCode(document.getElementById('qrcode'), { text: d.uid, width: qrSize, height: qrSize, colorDark : "#005780", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
+        }
+
+        // ★★★ V2.8 檢查已儲存的通行證 ★★★
+        function checkSavedPass() {
+            const saved = localStorage.getItem('member_pass');
+            if (saved) {
+                try {
+                    const d = JSON.parse(saved);
+                    showPass(d);
+                } catch(e) { console.error(e); }
+            }
+        }
+
+        // ★★★ V2.8 登出功能 ★★★
+        function logoutMember() {
+            if(!confirm("確定要登出切換帳號嗎？")) return;
+            localStorage.removeItem('member_pass');
+            location.reload();
         }
 
         function startKiosk() {
@@ -547,46 +537,27 @@
 
         function toggleCamera() { isScanning ? stopCamera() : startCamera(); }
         
-        // ★★★ V2.6 修正2：輸入端掃描邏輯優化 (防重複、倒數遮罩) ★★★
         function startCamera() {
             document.getElementById('scanner-view').style.display = 'block';
             document.getElementById('btn-cam').innerText = "❌ 關閉相機";
             document.getElementById('btn-cam').style.background = "#333";
             
-            isScanningProcessing = false; // 重置鎖定狀態
+            isScanningProcessing = false;
 
             html5QrCode = new Html5Qrcode("reader");
             html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (uid)=>{
-                // 如果正在處理中，直接略過，不執行任何動作 (防止連點)
                 if(isScanningProcessing) return; 
-
-                // 標記為處理中
                 isScanningProcessing = true;
 
                 if(guestsData[uid]) {
                     const g = guestsData[uid];
                     const isDuplicate = g.arrived;
-
-                    // 如果尚未報到，執行報到
-                    if(!isDuplicate) {
-                        checkIn(uid, true);
-                    }
-
-                    // 呼叫顯示結果遮罩 (成功或重複)
+                    if(!isDuplicate) { checkIn(uid, true); }
                     showReceptionResult(g, isDuplicate);
-
-                    // 3秒後自動關閉遮罩並解鎖，允許下一次掃描
-                    setTimeout(() => {
-                        closeReceptionResult();
-                        isScanningProcessing = false;
-                    }, 3000);
-
+                    setTimeout(() => { closeReceptionResult(); isScanningProcessing = false; }, 3000);
                 } else {
-                    // 掃到無效 QR，顯示短暫錯誤提示，然後解鎖
                     Swal.fire({ icon: 'error', title: '錯誤', text: '非本場名單', timer: 1500, showConfirmButton: false })
-                    .then(() => {
-                        isScanningProcessing = false;
-                    });
+                    .then(() => { isScanningProcessing = false; });
                 }
             });
             isScanning = true;
@@ -597,47 +568,24 @@
             const icon = document.getElementById('scan-icon');
             const title = document.getElementById('scan-status-text');
             const fill = document.getElementById('scan-countdown-fill');
-
-            // 設定內容
             document.getElementById('scan-photo').src = g.photo || defaultAvatar;
             document.getElementById('scan-name').innerText = g.name;
             document.getElementById('scan-title').innerText = g.title;
-
-            // 依狀態改變樣式
-            if(isDuplicate) {
-                icon.innerText = "!";
-                icon.className = "status-warning";
-                title.innerText = "已重複報到";
-                title.className = "status-warning";
-            } else {
-                icon.innerText = "✔";
-                icon.className = "status-success";
-                title.innerText = "報到成功";
-                title.className = "status-success";
-            }
-
-            // 顯示遮罩
+            if(isDuplicate) { icon.innerText = "!"; icon.className = "status-warning"; title.innerText = "已重複報到"; title.className = "status-warning"; } 
+            else { icon.innerText = "✔"; icon.className = "status-success"; title.innerText = "報到成功"; title.className = "status-success"; }
             overlay.style.display = 'flex';
-
-            // 執行倒數動畫
-            fill.style.transition = 'none'; 
-            fill.style.width = '100%';
-            setTimeout(() => { 
-                fill.style.transition = 'width 3s linear'; 
-                fill.style.width = '0%'; 
-            }, 50);
+            fill.style.transition = 'none'; fill.style.width = '100%';
+            setTimeout(() => { fill.style.transition = 'width 3s linear'; fill.style.width = '0%'; }, 50);
         }
 
-        function closeReceptionResult() {
-            document.getElementById('reception-scan-result').style.display = 'none';
-        }
+        function closeReceptionResult() { document.getElementById('reception-scan-result').style.display = 'none'; }
 
         function stopCamera() {
             if(html5QrCode) { html5QrCode.stop().then(()=>{ html5QrCode.clear(); html5QrCode = null; }); }
             document.getElementById('scanner-view').style.display = 'none';
             document.getElementById('btn-cam').innerText = "📷 掃描 QR (後鏡頭)";
             document.getElementById('btn-cam').style.background = "linear-gradient(45deg, #ff5722, #ff9800)";
-            document.getElementById('reception-scan-result').style.display = 'none'; // 確保遮罩關閉
+            document.getElementById('reception-scan-result').style.display = 'none';
             isScanning = false;
         }
 
@@ -645,7 +593,6 @@
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
             list.innerHTML = '';
-            
             Object.values(guestsData)
                 .sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0))
                 .forEach(g => {
@@ -662,20 +609,8 @@
         }
 
         function deleteGuest(uid) {
-            Swal.fire({
-                title: '確定刪除?',
-                text: "刪除後無法復原",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: '刪除',
-                cancelButtonText: '取消'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    db.ref(`events_data/${currentEventId}/${uid}`).remove();
-                    Swal.fire('已刪除', '', 'success');
-                }
+            Swal.fire({ title: '確定刪除?', text: "刪除後無法復原", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6', confirmButtonText: '刪除', cancelButtonText: '取消' }).then((result) => {
+                if (result.isConfirmed) { db.ref(`events_data/${currentEventId}/${uid}`).remove(); Swal.fire('已刪除', '', 'success'); }
             })
         }
 
@@ -712,29 +647,12 @@
         
         function addNewGuest() {
             Swal.fire({
-                title: '新增現場來賓',
-                html: `
-                    <div id="swal-form-grid">
-                        <input id="swal-name" class="swal-large-input" placeholder="姓名">
-                        <input id="swal-title" class="swal-large-input" placeholder="職稱">
-                        <select id="swal-group" class="swal-large-input">
-                            <option value="External">友會貴賓</option>
-                            <option value="Official">長官</option>
-                            <option value="Internal">本會會員</option>
-                        </select>
-                    </div>
-                `,
-                customClass: { popup: 'swal-wide-popup' },
-                showCancelButton: true,
-                confirmButtonText: '新增',
+                title: '新增現場來賓', html: `<div id="swal-form-grid"><input id="swal-name" class="swal-large-input" placeholder="姓名"><input id="swal-title" class="swal-large-input" placeholder="職稱"><select id="swal-group" class="swal-large-input"><option value="External">友會貴賓</option><option value="Official">長官</option><option value="Internal">本會會員</option></select></div>`,
+                customClass: { popup: 'swal-wide-popup' }, showCancelButton: true, confirmButtonText: '新增',
                 preConfirm: () => {
                     const name = document.getElementById('swal-name').value;
                     if (!name) Swal.showValidationMessage('請輸入姓名');
-                    return {
-                        name: name,
-                        title: document.getElementById('swal-title').value,
-                        group: document.getElementById('swal-group').value
-                    };
+                    return { name: name, title: document.getElementById('swal-title').value, group: document.getElementById('swal-group').value };
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
@@ -746,22 +664,12 @@
 
         function clearGuestList() {
             if(!confirm("確定清空所有名單？活動將保留，但簽到資料會消失。")) return;
-            db.ref(`events_data/${currentEventId}`).remove()
-              .then(() => Swal.fire("已清空", "名單已重置", "success"));
+            db.ref(`events_data/${currentEventId}`).remove().then(() => Swal.fire("已清空", "名單已重置", "success"));
         }
 
         function syncFromCloud() {
             Swal.fire({
-                title: '請選擇同步來源',
-                text: "這將會覆蓋目前的初始名單",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: '僅會內會員 (Internal)',
-                confirmButtonColor: '#0097D7', 
-                showDenyButton: true,
-                denyButtonText: '全體名單 (All Data)',
-                denyButtonColor: '#28a745', 
-                cancelButtonText: '取消'
+                title: '請選擇同步來源', text: "這將會覆蓋目前的初始名單", icon: 'question', showCancelButton: true, confirmButtonText: '僅會內會員 (Internal)', confirmButtonColor: '#0097D7', showDenyButton: true, denyButtonText: '全體名單 (All Data)', denyButtonColor: '#28a745', cancelButtonText: '取消'
             }).then((result) => {
                 if (result.isDismissed) return; 
                 const onlyInternal = result.isConfirmed; 
@@ -771,10 +679,7 @@
                     let count = 0;
                     data.forEach((row, index) => {
                         if (onlyInternal && row.group.toLowerCase() !== 'internal') return;
-                        newData[row.id] = { 
-                            id: row.id, name: row.name, title: row.title, group: row.group, photo: row.photo, 
-                            arrived: false, timestamp: 0, originalIndex: index 
-                        };
+                        newData[row.id] = { id: row.id, name: row.name, title: row.title, group: row.group, photo: row.photo, arrived: false, timestamp: 0, originalIndex: index };
                         count++;
                     });
                     db.ref(`events_data/${currentEventId}`).set(newData).then(() => Swal.fire("同步成功", `匯入 ${count} 筆`, "success"));
@@ -786,13 +691,11 @@
             let eventName = "簽到表"; if (currentEventId && allEvents[currentEventId]) eventName = allEvents[currentEventId].name;
             const clean = (text) => String(text || "").replace(/,/g, ' ').replace(/\n/g, ' ').trim();
             let csv = "\uFEFF姓名,職稱,分類,簽到狀態,報到時間\n";
-            Object.values(guestsData)
-                .sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0))
-                .forEach(g => {
-                    let statusStr = "", timeStr = "";
-                    if (g.arrived) { statusStr = "已到"; if (g.timestamp) { let d = new Date(g.timestamp); const pad = (n) => (n < 10 ? '0' + n : n); timeStr = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; } }
-                    csv += `${clean(g.name)},${clean(g.title)},${clean(g.group)},${statusStr},${timeStr}\n`;
-                });
+            Object.values(guestsData).sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0)).forEach(g => {
+                let statusStr = "", timeStr = "";
+                if (g.arrived) { statusStr = "已到"; if (g.timestamp) { let d = new Date(g.timestamp); const pad = (n) => (n < 10 ? '0' + n : n); timeStr = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; } }
+                csv += `${clean(g.name)},${clean(g.title)},${clean(g.group)},${statusStr},${timeStr}\n`;
+            });
             const l = document.createElement("a"); l.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); l.download = eventName + ".csv"; l.click();
         }
         function deleteEvent() {
