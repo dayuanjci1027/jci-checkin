@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 自助報到系統 V2.4</title>
+    <title>JCI 自助報到系統 V2.5</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -93,6 +93,7 @@
             #qrcode { padding: 5px; margin-top: 5px; }
         }
 
+        /* 介面整合修正：按鈕容器 */
         .event-card { background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; }
         .event-card.active { background: #e3f2fd; border-color: var(--jci-blue); }
         .guest-item { background: white; padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
@@ -137,6 +138,26 @@
             background: #f9fcff;
         }
         .swal-large-input:focus { border-color: var(--jci-blue); outline: none; }
+
+        /* V2.5 新增：設定選單內的按鈕樣式 */
+        .settings-btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .settings-action-btn {
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .settings-action-btn:active { transform: scale(0.98); }
 
     </style>
 </head>
@@ -232,13 +253,12 @@
     <div id="page-reception" class="page">
         <h2 style="margin-bottom:20px; text-align: center;">輸入端 (櫃台)</h2>
         <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px; font-size: 1.2rem;" onclick="toggleCamera()">📷 掃描 QR (後鏡頭)</button>
+        
         <div style="background:white; padding:15px; border-radius:10px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; border:1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
             <button onclick="addNewGuest()" style="background:var(--jci-blue); color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; font-size: 1rem;">➕ 新增來賓</button>
-            <button onclick="syncFromCloud()" style="background:#007bff; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size: 1rem;">☁️ 同步名單</button>
-            <button onclick="exportCSV()" style="background:#28a745; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size: 1rem;">📥 匯出紀錄</button>
-            <button onclick="adminSettings()" style="background:#607d8b; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size: 1rem;">⚙️ 系統設定</button>
-            <button onclick="deleteEvent()" style="background:#ffebee; color:#c62828; border:1px solid #ffcdd2; padding:12px 20px; border-radius:8px; cursor:pointer; margin-left:auto; font-size: 1rem;">🗑️ 重置活動</button>
+            <button onclick="adminSettings()" style="background:#607d8b; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; font-size: 1rem;">⚙️ 系統設定</button>
         </div>
+
         <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:20px; margin-bottom:20px; overflow:hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);"><div id="reader" style="width:100%"></div></div>
         <div style="position:relative; margin-bottom:15px;"><input type="text" id="search-box" placeholder="🔍 搜尋姓名..." class="styled-input" style="margin-bottom: 0; font-size: 1.1rem;" onkeyup="renderReception()"></div>
         <div id="reception-list"></div>
@@ -311,14 +331,25 @@
             }
         }
 
+        // ★★★ V2.5 改寫：整合式系統設定選單 ★★★
         function adminSettings() {
             Swal.fire({
                 title: '⚙️ 系統設定',
                 html: `
                     <div style="text-align:left; margin-bottom:10px;">目前狀態: ${systemSettings.locked ? '<span style="color:red;font-weight:bold;">已鎖定 (公開需密碼)</span>' : '<span style="color:green;font-weight:bold;">已公開 (免密碼)</span>'}</div>
-                    <button id="toggle-lock-btn" class="btn-gradient" style="background:${systemSettings.locked?'#4caf50':'#f44336'}; margin-bottom:20px;">
+                    <button id="toggle-lock-btn" class="btn-gradient" style="background:${systemSettings.locked?'#4caf50':'#f44336'}; margin-bottom:15px; padding:10px;">
                         ${systemSettings.locked ? '🔓 解除鎖定 (設為公開)' : '🔒 啟用鎖定 (設為私密)'}
                     </button>
+                    
+                    <hr>
+                    <h3 style="font-size:1rem; color:#666; margin:15px 0 10px; text-align:left;">📦 資料管理</h3>
+                    <div class="settings-btn-grid">
+                        <button id="btn-sync" class="settings-action-btn" style="background:#007bff;">☁️ 同步名單</button>
+                        <button id="btn-export" class="settings-action-btn" style="background:#28a745;">📥 匯出紀錄</button>
+                        <button id="btn-clear" class="settings-action-btn" style="background:#ff9800;">⚠️ 清空名單</button>
+                        <button id="btn-del-evt" class="settings-action-btn" style="background:#d32f2f;">🗑️ 刪除活動</button>
+                    </div>
+
                     <hr>
                     <div style="text-align:left; margin-bottom:5px;">修改管理員密碼:</div>
                     <input id="new-admin-pwd" class="swal2-input" placeholder="輸入新密碼" value="${systemSettings.password}">
@@ -326,12 +357,19 @@
                 showCancelButton: true,
                 confirmButtonText: '儲存變更',
                 didOpen: () => {
+                    // 綁定鎖定按鈕
                     document.getElementById('toggle-lock-btn').onclick = () => {
                         const newStatus = !systemSettings.locked;
                         db.ref('settings/locked').set(newStatus);
                         Swal.close();
                         Swal.fire('成功', newStatus ? '系統已上鎖' : '系統已公開', 'success');
                     };
+
+                    // 綁定資料管理按鈕
+                    document.getElementById('btn-sync').onclick = () => { Swal.close(); syncFromCloud(); };
+                    document.getElementById('btn-export').onclick = () => { exportCSV(); }; // 匯出不一定要關閉視窗，但為了保持邏輯一致性
+                    document.getElementById('btn-clear').onclick = () => { Swal.close(); clearGuestList(); };
+                    document.getElementById('btn-del-evt').onclick = () => { Swal.close(); deleteEvent(); };
                 },
                 preConfirm: () => { return document.getElementById('new-admin-pwd').value; }
             }).then((result) => {
@@ -481,13 +519,12 @@
             isScanning = false;
         }
 
-        // ★★★ 修正排序邏輯：依照「試算表原始順序」 (originalIndex) 排序 ★★★
+        // 排序邏輯：依照 originalIndex
         function renderReception() {
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
             list.innerHTML = '';
             
-            // 使用 originalIndex 進行排序，確保跟 Excel 一樣
             Object.values(guestsData)
                 .sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0))
                 .forEach(g => {
@@ -581,13 +618,19 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     const newId = "walkin_" + Date.now();
-                    // 新增的來賓強制排在最後面 (index = 999999)
                     db.ref(`events_data/${currentEventId}/${newId}`).set({ id: newId, name: result.value.name, title: result.value.title || '貴賓', group: result.value.group, photo: "", arrived: true, timestamp: firebase.database.ServerValue.TIMESTAMP, acked: false, originalIndex: 999999 });
                 }
             });
         }
 
-        // ★★★ V2.4 補回：選擇同步來源 (分流同步) 並且加上 Index ★★★
+        // V2.5 新增：清空名單 (保留活動)
+        function clearGuestList() {
+            if(!confirm("確定清空所有名單？活動將保留，但簽到資料會消失。")) return;
+            db.ref(`events_data/${currentEventId}`).remove()
+              .then(() => Swal.fire("已清空", "名單已重置", "success"));
+        }
+
+        // 分流同步功能
         function syncFromCloud() {
             Swal.fire({
                 title: '請選擇同步來源',
@@ -601,9 +644,9 @@
                 denyButtonColor: '#28a745', 
                 cancelButtonText: '取消'
             }).then((result) => {
-                if (result.isDismissed) return; // 按取消
+                if (result.isDismissed) return; 
 
-                const onlyInternal = result.isConfirmed; // True = 藍色按鈕 (僅會員)
+                const onlyInternal = result.isConfirmed; 
                 
                 Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
                 
@@ -612,9 +655,7 @@
                     let count = 0;
                     
                     data.forEach((row, index) => {
-                        // 如果選「僅會員」，則只匯入 group 為 internal 或 Internal 的
                         if (onlyInternal && row.group.toLowerCase() !== 'internal') return;
-
                         newData[row.id] = { 
                             id: row.id, 
                             name: row.name, 
@@ -623,7 +664,7 @@
                             photo: row.photo, 
                             arrived: false, 
                             timestamp: 0,
-                            originalIndex: index // ★ 關鍵：把試算表的順序存下來
+                            originalIndex: index 
                         };
                         count++;
                     });
@@ -637,8 +678,6 @@
             let eventName = "簽到表"; if (currentEventId && allEvents[currentEventId]) eventName = allEvents[currentEventId].name;
             const clean = (text) => String(text || "").replace(/,/g, ' ').replace(/\n/g, ' ').trim();
             let csv = "\uFEFF姓名,職稱,分類,簽到狀態,報到時間\n";
-            
-            // 匯出時也依照原始順序
             Object.values(guestsData)
                 .sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0))
                 .forEach(g => {
