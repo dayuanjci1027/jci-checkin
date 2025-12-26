@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 自助報到系統 V2.10</title>
+    <title>JCI 報到系統 V3.0 (實戰版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -19,6 +19,7 @@
             --jci-dark: #005780;
             --accent: #FFC107; 
             --bg-gradient: linear-gradient(135deg, #0097D7 0%, #005780 100%);
+            --mc-bg: #fff8e1; /* 司儀頁面背景 */
         }
         
         body { 
@@ -73,25 +74,9 @@
         .login-card { background: white; width: 100%; max-width: 400px; padding: 30px; border-radius: 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.08); position: relative; overflow: hidden; margin-top: 10px; }
         .login-logo { width: 70%; max-width: 220px; height: auto; margin: 0 auto 15px auto; display: block; }
 
-        #pass-area { display: none; margin-top: 10px; animation: fadeIn 0.5s; }
-        #pass-photo { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 5px; border: 4px solid #f0f2f5; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        #pass-name { font-weight: bold; font-size: 1.6rem; margin-top: 5px; margin-bottom: 0; color: var(--jci-dark); line-height: 1.2; }
-        #pass-title { color: #888; font-size: 1rem; margin-bottom: 5px; }
-        #qrcode { margin: 10px auto; display: flex; justify-content: center; align-items: center; padding: 10px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); width: fit-content; }
-        #qrcode img { display: block; }
-        .save-hint { font-size: 0.8rem; color: #999; background: #f8f9fa; padding: 5px 10px; border-radius: 15px; display: inline-block; margin-bottom: 5px; }
-
         .styled-input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 1rem; margin-bottom: 15px; box-sizing: border-box; text-align: center; }
         .btn-gradient { width: 100%; padding: 14px; background: var(--bg-gradient); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: 0.3s; margin-top: 5px; box-shadow: 0 5px 15px rgba(0,151,215,0.3); }
         .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,151,215,0.4); }
-
-        @media (max-width: 480px) {
-            .login-card { padding: 20px; border-radius: 20px; }
-            .login-logo { width: 60%; margin-bottom: 10px; }
-            #pass-photo { width: 85px; height: 85px; border-width: 3px; }
-            #pass-name { font-size: 1.4rem; }
-            #qrcode { padding: 5px; margin-top: 5px; }
-        }
 
         .event-card { 
             background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; 
@@ -138,6 +123,13 @@
         .status-success { color: #28a745; }
         .status-warning { color: #ffc107; }
 
+        /* V3.0 MC Page Styles */
+        .mc-item { background: white; padding: 20px; border-bottom: 2px solid #eee; display: flex; align-items: center; font-size: 1.2rem; }
+        .mc-item:nth-child(odd) { background: #fafafa; }
+        .mc-time { font-size: 1rem; color: #666; background: #eee; padding: 5px 10px; border-radius: 10px; margin-right: 15px; font-weight: bold; min-width: 60px; text-align: center;}
+        .mc-name { font-weight: bold; font-size: 1.8rem; margin-right: 10px; color: #333; }
+        .mc-title { color: var(--jci-blue); font-weight: bold; font-size: 1.3rem; }
+
     </style>
 </head>
 <body>
@@ -149,9 +141,6 @@
             <p style="color:#666; margin-bottom:20px;">請輸入管理員密碼以進入</p>
             <input type="password" id="lock-password" class="styled-input" placeholder="密碼">
             <button class="btn-gradient" onclick="unlockSystem()">登入系統</button>
-            <div style="margin-top:20px; cursor:pointer; text-decoration:underline; color:var(--jci-blue); font-weight:bold;" onclick="goPage('member')">
-                我是會員，前往領證
-            </div>
         </div>
     </div>
 
@@ -159,7 +148,7 @@
         <div class="result-content">
             <div id="scan-icon" style="font-size: 5rem; line-height: 1;">✔</div>
             <h2 id="scan-status-text" style="margin:10px 0 0 0; font-size:2rem;">報到成功</h2>
-            <img id="scan-photo" class="avatar" style="width:150px; height:150px; margin-top:25px;" src="">
+            <img id="scan-photo" class="avatar" style="width:150px; height:150px; margin-top:25px;" src="" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'">
             <h1 id="scan-name" style="color:var(--jci-blue); margin:15px 0 5px 0; font-size:2.5rem;"></h1>
             <div id="scan-title" style="color:#666; font-size:1.5rem;"></div>
             <div class="countdown-bar"><div id="scan-countdown-fill" class="countdown-fill"></div></div>
@@ -173,16 +162,16 @@
         </div>
         <div class="mobile-menu-btn" onclick="toggleMenu()">☰</div>
         <div class="nav-group">
-            <div class="nav-item" onclick="goPage('member')">會員領證</div>
             <div class="nav-item" onclick="goPage('kiosk')">自助報到</div>
             <div class="nav-item" onclick="goPage('reception')">輸入端</div>
             <div class="nav-item" onclick="goPage('dashboard')">輸出端</div>
+            <div class="nav-item" onclick="goPage('mc')">司儀視角</div>
         </div>
         <div class="mobile-dropdown" id="mobile-nav">
-            <div class="nav-item" onclick="goPage('member')">會員領證</div>
             <div class="nav-item" onclick="goPage('kiosk')">自助報到</div>
             <div class="nav-item" onclick="goPage('reception')">輸入端</div>
             <div class="nav-item" onclick="goPage('dashboard')">輸出端</div>
+            <div class="nav-item" onclick="goPage('mc')">司儀視角</div>
         </div>
     </div>
 
@@ -190,32 +179,9 @@
         <h2 style="color:#333; text-align: center;">📅 活動列表</h2>
         <div id="event-list" style="max-width: 600px; margin: 0 auto;">載入中...</div>
         <div class="fab" onclick="createNewEvent()">+</div>
-        <div style="text-align:center; margin-top:40px;">
-            <button onclick="showSiteQR()" style="background:white; border:1px solid #ddd; padding:12px 25px; border-radius:30px; cursor:pointer; font-weight:bold; color:#555; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">📱 顯示入場 QR</button>
-        </div>
     </div>
 
-    <div id="page-member" class="page">
-        <div class="login-bg">
-            <div class="login-card">
-                <img src="https://lh3.googleusercontent.com/d/1XbUrBBqLrGL3wceODZl790Bk1oGTp3do" alt="JCI Dayuan Logo" class="login-logo">
-                <div id="login-form" style="margin-top: 20px;">
-                    <input type="text" id="login-id" class="styled-input" placeholder="身分證字號 (英文字母大寫)">
-                    <input type="text" id="login-dob" class="styled-input" placeholder="生日 (例如: 19920101)">
-                    <button id="btn-verify" class="btn-gradient" onclick="verifyWithGoogle()">領取通行證</button>
-                </div>
-                <div id="pass-area">
-                    <img id="pass-photo" src="">
-                    <div id="pass-name"></div>
-                    <div id="pass-title"></div>
-                    <div id="qrcode"></div>
-                    <div class="save-hint">請截圖保存</div>
-                    <br>
-                    <button onclick="logoutMember()" style="background:none; border:none; color:#999; margin-top:10px; cursor:pointer; text-decoration:underline; font-size: 0.9rem;">登出 / 切換帳號</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div id="page-member" class="page"></div>
 
     <div id="page-kiosk" class="page">
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh;">
@@ -233,9 +199,9 @@
             </div>
 
             <div id="kiosk-success-view" class="login-card" style="width:100%; max-width: 450px;">
-                <div style="color:#28a745; font-size:6rem; line-height: 1;">✔</div>
-                <h2 style="margin:10px 0 0 0; font-size:2.2rem; color: #28a745;">報到成功</h2>
-                <img id="kiosk-photo" class="avatar" style="width:160px; height:160px; margin-top:25px;" src="">
+                <div id="kiosk-icon" style="color:#28a745; font-size:6rem; line-height: 1;">✔</div>
+                <h2 id="kiosk-status" style="margin:10px 0 0 0; font-size:2.2rem; color: #28a745;">報到成功</h2>
+                <img id="kiosk-photo" class="avatar" style="width:160px; height:160px; margin-top:25px;" src="" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'">
                 <h1 id="kiosk-name" style="color:var(--jci-blue); margin:15px 0 5px 0; font-size:2.8rem;"></h1>
                 <div id="kiosk-title" style="color:#666; font-size:1.6rem;"></div>
                 <div class="countdown-bar"><div id="countdown-fill" class="countdown-fill"></div></div>
@@ -254,22 +220,20 @@
         </div>
 
         <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:20px; margin-bottom:20px; overflow:hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);"><div id="reader" style="width:100%"></div></div>
-        <div style="position:relative; margin-bottom:15px;"><input type="text" id="search-box" placeholder="🔍 搜尋姓名..." class="styled-input" style="margin-bottom: 0; font-size: 1.1rem;" onkeyup="renderReception()"></div>
+        <div style="position:relative; margin-bottom:15px;"><input type="text" id="search-box" placeholder="🔍 搜尋姓名 或 職稱..." class="styled-input" style="margin-bottom: 0; font-size: 1.1rem;" onkeyup="renderReception()"></div>
         <div id="reception-list"></div>
+    </div>
+
+    <div id="page-mc" class="page" style="background-color: var(--mc-bg);">
+        <h2 style="color:var(--jci-dark); margin:0 0 20px 0; text-align: center; border-bottom: 3px solid var(--jci-blue); padding-bottom: 10px;">🎤 司儀唱名表 (依抵達順序)</h2>
+        <div id="mc-list" style="max-width: 800px; margin: 0 auto; box-shadow: 0 5px 20px rgba(0,0,0,0.05);"></div>
+        <div id="mc-empty" style="text-align:center; color:#999; margin-top:50px; display:none; font-size: 1.5rem;">目前無會長/主席進場</div>
     </div>
 
     <div id="page-dashboard" class="page" style="background-color: #222; min-height: 100vh;">
         <h2 style="color:white; margin:0 0 30px 0; text-align: center; font-size: 2.5rem; letter-spacing: 2px;">貴賓蒞臨牆</h2>
         <div id="empty-msg" style="color:#666; text-align:center; margin-top:20%; font-size:1.8rem; display:none; font-weight: bold;">等待貴賓蒞臨...</div>
         <div id="dashboard-grid"></div>
-    </div>
-
-    <div id="site-qr-modal" onclick="this.style.display='none'">
-        <div id="site-qr-box" onclick="event.stopPropagation()">
-            <h2 style="margin:0 0 20px 0; color:var(--jci-blue);">會員掃碼入場</h2>
-            <div id="site-qrcode" style="margin:30px auto;"></div>
-            <p style="color:#666; font-size:1rem;">請掃描此碼領取電子通行證</p>
-        </div>
     </div>
 
     <script>
@@ -289,11 +253,8 @@
         const db = firebase.database();
         const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/847/847969.png";
         
-        // ★★★ V2.10 新增：圖片網址整形術 (強制防快取) ★★★
         function getPhotoUrl(url) {
             if (!url) return defaultAvatar;
-            // 如果網址已經有參數了(有?)，就加 &，否則加 ?
-            // 最後加上當下的時間 (new Date().getTime()) 來騙過瀏覽器
             return url + (url.indexOf('?') > -1 ? '&' : '?') + 't=' + new Date().getTime();
         }
 
@@ -302,6 +263,7 @@
         let allEvents = {};
         let html5QrCode = null; 
         let kioskQrCode = null; 
+        let kioskTimeout = null; // V3.0 自助報到逾時變數
         let isScanning = false;
         let isScanningProcessing = false;
         let systemSettings = { locked: false, password: '123' };
@@ -319,16 +281,6 @@
             if (!systemSettings.locked || sessionStorage.getItem('system_unlocked')) {
                 document.getElementById('system-lock-screen').style.display = 'none';
                 return;
-            }
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('mode') === 'entry') {
-                 document.getElementById('system-lock-screen').style.display = 'none';
-                 return;
-            }
-            const memberPage = document.getElementById('page-member');
-            if (memberPage && memberPage.classList.contains('active')) {
-                 document.getElementById('system-lock-screen').style.display = 'none';
-                 return;
             }
             document.getElementById('system-lock-screen').style.display = 'flex';
         }
@@ -389,26 +341,17 @@
 
         db.ref('events_meta').on('value', snap => { allEvents = snap.val() || {}; renderEventList(); });
 
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('mode') === 'entry') {
-                document.getElementById('nav-bar').classList.add('hide-nav');
-                goPage('member');
-                checkSavedPass();
-            }
-        };
-
         function toggleMenu() { document.getElementById('mobile-nav').classList.toggle('show'); }
 
         function goPage(p) {
-            if (!currentEventId && p !== 'home' && p !== 'member') return Swal.fire("請先在活動大廳選擇一個活動");
+            if (!currentEventId && p !== 'home') return Swal.fire("請先在活動大廳選擇一個活動");
             document.getElementById('mobile-nav').classList.remove('show');
             document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
             document.getElementById('page-' + p).classList.add('active');
             document.querySelectorAll('.nav-group .nav-item').forEach(e => e.classList.remove('active'));
             document.querySelectorAll('#mobile-nav .nav-item').forEach(e => e.classList.remove('active'));
 
-            const navMap = {'member':0, 'kiosk':1, 'reception':2, 'dashboard':3};
+            const navMap = {'kiosk':0, 'reception':1, 'dashboard':2, 'mc':3};
             if(navMap[p] !== undefined) {
                 const desktopItems = document.querySelectorAll('.nav-group .nav-item');
                 if(desktopItems[navMap[p]]) desktopItems[navMap[p]].classList.add('active');
@@ -417,9 +360,11 @@
             }
             if(p !== 'reception') stopCamera(); 
             if(p !== 'kiosk') stopKiosk();
+            
+            // V3.0: 進入 MC 頁面時刷新列表
+            if(p === 'mc') renderMC();
 
             checkSystemLock();
-            if (p === 'member') checkSavedPass();
         }
 
         function createNewEvent() {
@@ -457,49 +402,12 @@
                 guestsData = snap.val() || {};
                 renderReception();
                 renderDashboard();
+                renderMC(); // V3.0 更新 MC 列表
             });
             goPage('reception');
         }
 
-        function verifyWithGoogle() {
-            const id = document.getElementById('login-id').value.trim().toUpperCase();
-            const dob = document.getElementById('login-dob').value.trim();
-            const btn = document.getElementById('btn-verify');
-            if (!id || !dob) return Swal.fire("請輸入完整資料");
-            
-            btn.innerText = "驗證中..."; btn.disabled = true;
-            fetch(`${GOOGLE_SCRIPT_URL}?id=${id}&dob=${dob}`).then(r => r.json()).then(d => {
-                btn.innerText = "領取通行證"; btn.disabled = false;
-                if (d.status === 'success') {
-                    localStorage.setItem('member_pass', JSON.stringify(d));
-                    showPass(d);
-                } else { Swal.fire("驗證失敗", "資料不符", "error"); }
-            }).catch(()=> { btn.innerText="領取通行證"; btn.disabled=false; Swal.fire("連線錯誤", "請檢查網路", "error"); });
-        }
-
-        // ★★★ V2.10 修改：顯示會員卡時加上強制整形 ★★★
-        function showPass(d) {
-            document.getElementById('login-form').style.display='none';
-            document.getElementById('pass-area').style.display='block';
-            document.getElementById('pass-name').innerText = d.name;
-            document.getElementById('pass-title').innerText = d.title;
-            // 這裡使用了 getPhotoUrl
-            document.getElementById('pass-photo').src = getPhotoUrl(d.photo);
-            document.getElementById('qrcode').innerHTML = '';
-            let qrSize = 200; if(window.innerWidth < 480) qrSize = 160; 
-            new QRCode(document.getElementById('qrcode'), { text: d.uid, width: qrSize, height: qrSize, colorDark : "#005780", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.H });
-        }
-
-        function checkSavedPass() {
-            const saved = localStorage.getItem('member_pass');
-            if (saved) { try { const d = JSON.parse(saved); showPass(d); } catch(e) { console.error(e); } }
-        }
-
-        function logoutMember() {
-            if(!confirm("確定要登出切換帳號嗎？")) return;
-            localStorage.removeItem('member_pass');
-            location.reload();
-        }
+        // --- KIOSK 相關邏輯 ---
 
         function startKiosk() {
             document.getElementById('kiosk-standby').style.display = 'none';
@@ -508,32 +416,65 @@
             kioskQrCode = new Html5Qrcode("kiosk-reader");
             kioskQrCode.start({ facingMode: "user" }, { fps: 10, qrbox: { width: 300, height: 300 } }, onKioskScanSuccess)
             .catch(err => { console.error(err); Swal.fire("無法啟動前鏡頭", "請確認權限或使用 HTTPS", "error"); stopKiosk(); });
+
+            // V3.0 新增：15秒無操作自動返回待機
+            clearTimeout(kioskTimeout);
+            kioskTimeout = setTimeout(stopKiosk, 15000); 
         }
+
         function stopKiosk() {
             if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
             document.getElementById('kiosk-scanner-container').style.display = 'none';
             document.getElementById('kiosk-standby').style.display = 'block';
             document.getElementById('kiosk-success-view').style.display = 'none';
+            clearTimeout(kioskTimeout); // 清除計時器
         }
 
-        // ★★★ V2.10 修改：Kiosk 顯示照片時加上強制整形 ★★★
         function onKioskScanSuccess(uid) {
+            clearTimeout(kioskTimeout); // 掃到就清除計時
+
             if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
             document.getElementById('kiosk-scanner-container').style.display = 'none';
+            
             if(guestsData[uid]) {
                 const g = guestsData[uid];
-                if(!g.arrived) checkIn(uid, true);
+                const isDuplicate = g.arrived;
+
+                // 執行簽到
+                if(!isDuplicate) checkIn(uid, true);
+
+                // 顯示介面
                 document.getElementById('kiosk-success-view').style.display = 'block';
-                // 這裡使用了 getPhotoUrl
                 document.getElementById('kiosk-photo').src = getPhotoUrl(g.photo);
                 document.getElementById('kiosk-name').innerText = g.name;
                 document.getElementById('kiosk-title').innerText = g.title;
+
+                // V3.0 新增：重複報到顯示不同樣式
+                const statusText = document.getElementById('kiosk-status');
+                const statusIcon = document.getElementById('kiosk-icon');
+                if (isDuplicate) {
+                    statusText.innerText = "已重複報到";
+                    statusText.style.color = "#ffc107"; // 黃色
+                    statusIcon.innerText = "⚠";
+                    statusIcon.style.color = "#ffc107";
+                } else {
+                    statusText.innerText = "報到成功";
+                    statusText.style.color = "#28a745"; // 綠色
+                    statusIcon.innerText = "✔";
+                    statusIcon.style.color = "#28a745";
+                }
+
                 const fill = document.getElementById('countdown-fill');
                 fill.style.transition = 'none'; fill.style.width = '100%';
                 setTimeout(() => { fill.style.transition = 'width 3s linear'; fill.style.width = '0%'; }, 100);
                 setTimeout(() => { stopKiosk(); }, 3000);
-            } else { Swal.fire({ icon: 'error', title: '掃描失敗', text: '此 QR Code 不在名單中', timer: 2000, showConfirmButton: false }).then(() => startKiosk()); }
+            } else { 
+                Swal.fire({ icon: 'error', title: '掃描失敗', text: '此 QR Code 不在名單中', timer: 2000, showConfirmButton: false })
+                .then(() => startKiosk()); 
+            }
         }
+
+        // --- RECEPTION 相關邏輯 ---
 
         function toggleCamera() { isScanning ? stopCamera() : startCamera(); }
         
@@ -559,13 +500,11 @@
             isScanning = true;
         }
 
-        // ★★★ V2.10 修改：櫃台掃描顯示照片時加上強制整形 ★★★
         function showReceptionResult(g, isDuplicate) {
             const overlay = document.getElementById('reception-scan-result');
             const icon = document.getElementById('scan-icon');
             const title = document.getElementById('scan-status-text');
             const fill = document.getElementById('scan-countdown-fill');
-            // 這裡使用了 getPhotoUrl
             document.getElementById('scan-photo').src = getPhotoUrl(g.photo);
             document.getElementById('scan-name').innerText = g.name;
             document.getElementById('scan-title').innerText = g.title;
@@ -587,21 +526,66 @@
             isScanning = false;
         }
 
-        // ★★★ V2.10 修改：輸入端列表顯示照片時加上強制整形 ★★★
         function renderReception() {
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
             list.innerHTML = '';
             Object.values(guestsData).sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0)).forEach(g => {
-                if(search && g.name.indexOf(search) === -1) return;
+                // V3.0 修改：搜尋範圍增加 g.title
+                if(search && g.name.indexOf(search) === -1 && (g.title || "").indexOf(search) === -1) return;
+                
                 const d = document.createElement('div');
                 d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
-                // 這裡使用了 getPhotoUrl
-                d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${getPhotoUrl(g.photo)}" class="guest-photo-small"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
+                // V3.0 加上 onerror
+                d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${getPhotoUrl(g.photo)}" class="guest-photo-small" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
                 <div style="display:flex; gap:5px;">
                     <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>
                     <button onclick="deleteGuest('${g.id}')" style="padding:6px 10px;border:none;border-radius:50%;background:#ffebee;color:#c62828;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑️</button>
                 </div>`;
+                list.appendChild(d);
+            });
+        }
+
+        // V3.0 新增：MC 頁面渲染邏輯
+        function renderMC() {
+            const list = document.getElementById('mc-list');
+            const emptyMsg = document.getElementById('mc-empty');
+            list.innerHTML = '';
+
+            // 篩選：已簽到 AND (職稱包含 "會長" 或 "主席" OR 分類是 "Official")
+            let vips = Object.values(guestsData).filter(g => {
+                if (!g.arrived) return false;
+                const title = (g.title || "");
+                return title.indexOf("會長") > -1 || title.indexOf("主席") > -1 || g.group === 'Official';
+            });
+
+            if (vips.length === 0) {
+                emptyMsg.style.display = 'block';
+                return;
+            }
+            emptyMsg.style.display = 'none';
+
+            // 排序：依照抵達時間 (先到的在上面，方便司儀依序唸)
+            vips.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+            vips.forEach(g => {
+                const d = document.createElement('div');
+                d.className = 'mc-item';
+                
+                // 時間格式化 HH:MM
+                let timeStr = "--:--";
+                if(g.timestamp) {
+                    const date = new Date(g.timestamp);
+                    const h = date.getHours().toString().padStart(2, '0');
+                    const m = date.getMinutes().toString().padStart(2, '0');
+                    timeStr = `${h}:${m}`;
+                }
+
+                d.innerHTML = `
+                    <div class="mc-time">${timeStr}</div>
+                    <div class="mc-name">${g.name}</div>
+                    <div class="mc-title">${g.title}</div>
+                `;
                 list.appendChild(d);
             });
         }
@@ -616,7 +600,6 @@
             db.ref(`events_data/${currentEventId}/${id}`).update({ arrived: status, timestamp: status ? firebase.database.ServerValue.TIMESTAMP : 0, acked: status ? false : null });
         }
 
-        // ★★★ V2.10 修改：儀表板顯示照片時加上強制整形 ★★★
         function renderDashboard() {
             const grid = document.getElementById('dashboard-grid');
             const emptyMsg = document.getElementById('empty-msg');
@@ -638,8 +621,8 @@
                 const d = document.createElement('div');
                 let cardClass = 'vip-card'; if (!g.acked) cardClass += ' new-arrival';
                 d.className = cardClass; d.onclick = function() { ackGuest(g.id); }; d.style.cursor = "pointer";
-                // 這裡使用了 getPhotoUrl
-                d.innerHTML = `<img src="${getPhotoUrl(g.photo)}" class="avatar"><div style="font-weight:bold;margin-bottom:5px; font-size:2.5rem; line-height:1.2;">${g.name}</div><div style="font-size:1.5rem;color:#666;">${g.title}</div>`;
+                // V3.0 加上 onerror
+                d.innerHTML = `<img src="${getPhotoUrl(g.photo)}" class="avatar" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'"><div style="font-weight:bold;margin-bottom:5px; font-size:2.5rem; line-height:1.2;">${g.name}</div><div style="font-size:1.5rem;color:#666;">${g.title}</div>`;
                 grid.appendChild(d);
             });
         }
@@ -675,7 +658,6 @@
                 const onlyInternal = result.isConfirmed; 
                 Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
                 
-                // 保留 V2.9 的時間戳記防止快取
                 fetch(`${GOOGLE_SCRIPT_URL}?op=get_all&_t=${new Date().getTime()}`).then(r => r.json()).then(data => {
                     const newData = {};
                     let count = 0;
@@ -704,10 +686,6 @@
             if(!currentEventId || !confirm("確定刪除此活動？")) return;
             db.ref(`events_meta/${currentEventId}`).remove(); db.ref(`events_data/${currentEventId}`).remove();
             currentEventId = null; document.getElementById('current-event-display').innerHTML = "<span>🏠</span> 尚未選擇活動"; goPage('home');
-        }
-        function showSiteQR() {
-            document.getElementById('site-qr-modal').style.display = 'flex'; document.getElementById('site-qrcode').innerHTML = '';
-            new QRCode(document.getElementById('site-qrcode'), { text: window.location.href.split('?')[0] + "?mode=entry", width: 250, height: 250 });
         }
     </script>
 </body>
