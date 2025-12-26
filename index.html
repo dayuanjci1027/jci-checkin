@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V3.1 (司儀優化版)</title>
+    <title>JCI 報到系統 V3.3 (司儀精準版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -19,7 +19,7 @@
             --jci-dark: #005780;
             --accent: #FFC107; 
             --bg-gradient: linear-gradient(135deg, #0097D7 0%, #005780 100%);
-            --mc-bg: #fff8e1; /* 司儀頁面背景 */
+            --mc-bg: #fff8e1;
         }
         
         body { 
@@ -124,12 +124,14 @@
         .status-warning { color: #ffc107; }
 
         /* MC Page Styles */
-        .mc-header { background: #eee; color: #555; font-weight: bold; padding: 10px 20px; font-size: 1.1rem; margin-top: 20px; border-left: 5px solid var(--jci-blue); }
-        .mc-item { background: white; padding: 20px; border-bottom: 2px solid #eee; display: flex; align-items: center; font-size: 1.2rem; }
-        .mc-item:nth-child(odd) { background: #fafafa; }
-        .mc-time { font-size: 1rem; color: #666; background: #eee; padding: 5px 10px; border-radius: 10px; margin-right: 15px; font-weight: bold; min-width: 60px; text-align: center;}
-        .mc-name { font-weight: bold; font-size: 1.8rem; margin-right: 10px; color: #333; }
-        .mc-title { color: var(--jci-blue); font-weight: bold; font-size: 1.3rem; }
+        .mc-layout { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; }
+        .mc-column { flex: 1; min-width: 300px; background: white; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); overflow: hidden; }
+        .mc-header { background: #333; color: white; font-weight: bold; padding: 15px; font-size: 1.2rem; text-align: center; border-bottom: 3px solid var(--jci-blue); }
+        .mc-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; font-size: 1.1rem; }
+        .mc-item:nth-child(even) { background: #fafafa; }
+        .mc-time { font-size: 0.9rem; color: #666; background: #eee; padding: 4px 8px; border-radius: 6px; margin-right: 12px; font-weight: bold; min-width: 50px; text-align: center;}
+        .mc-name { font-weight: bold; font-size: 1.5rem; margin-right: 10px; color: #333; }
+        .mc-title { color: var(--jci-blue); font-weight: bold; font-size: 1.1rem; }
 
     </style>
 </head>
@@ -226,8 +228,19 @@
     </div>
 
     <div id="page-mc" class="page" style="background-color: var(--mc-bg);">
-        <h2 style="color:var(--jci-dark); margin:0 0 20px 0; text-align: center; border-bottom: 3px solid var(--jci-blue); padding-bottom: 10px;">🎤 司儀唱名表 (依屆次排序)</h2>
-        <div id="mc-list" style="max-width: 800px; margin: 0 auto; box-shadow: 0 5px 20px rgba(0,0,0,0.05);"></div>
+        <h2 style="color:var(--jci-dark); margin:0 0 20px 0; text-align: center; padding-bottom: 10px;">🎤 司儀唱名表</h2>
+        
+        <div class="mc-layout">
+            <div class="mc-column">
+                <div class="mc-header">👑 本會歷屆會長 (依屆次)</div>
+                <div id="mc-list-presidents"></div>
+            </div>
+            <div class="mc-column">
+                <div class="mc-header">🎩 本會歷屆主席 (依屆次)</div>
+                <div id="mc-list-chairmen"></div>
+            </div>
+        </div>
+
         <div id="mc-empty" style="text-align:center; color:#999; margin-top:50px; display:none; font-size: 1.5rem;">目前無會長/主席進場</div>
     </div>
 
@@ -537,45 +550,38 @@
             });
         }
 
-        // V3.1 MC 頁面：依照會長主席屆數排序
+        // V3.3 MC 頁面：精準過濾 + 左右並排
         function renderMC() {
-            const list = document.getElementById('mc-list');
+            const listP = document.getElementById('mc-list-presidents');
+            const listC = document.getElementById('mc-list-chairmen');
             const emptyMsg = document.getElementById('mc-empty');
-            list.innerHTML = '';
+            
+            listP.innerHTML = '';
+            listC.innerHTML = '';
 
-            let allVips = Object.values(guestsData).filter(g => g.arrived && (g.title || "").match(/會長|主席/));
+            let allArrived = Object.values(guestsData).filter(g => g.arrived);
 
-            if (allVips.length === 0) { emptyMsg.style.display = 'block'; return; }
+            if (allArrived.length === 0) { emptyMsg.style.display = 'block'; return; }
             emptyMsg.style.display = 'none';
 
-            // 輔助函數：解析權重 (年份/屆數) -> 越大代表越新
             function parseWeight(title) {
                 if(!title) return 0;
-                if(title.indexOf("創會長") > -1) return 1; // 創會長排在最舊 (最小)
-                
-                // 優先抓取年份 (如 2025)
+                if(title.indexOf("創會長") > -1) return 1; 
                 const yearMatch = title.match(/20\d{2}/);
                 if(yearMatch) return parseInt(yearMatch[0]);
-
-                // 其次抓取屆數 (如 40屆) -> 轉換成大概的年份 (假設 1985 + 屆數) 以便比較
                 const termMatch = title.match(/(\d+)屆/);
                 if(termMatch) return 1985 + parseInt(termMatch[1]);
-                
                 return 0; 
             }
-
-            // 排序函數：權重大的排前面 (Desc)
             const sortFn = (a, b) => parseWeight(b.title) - parseWeight(a.title);
 
-            // 分組：會長組 & 主席組
-            const presidents = allVips.filter(g => (g.title||"").indexOf("會長") > -1).sort(sortFn);
-            const chairmen = allVips.filter(g => (g.title||"").indexOf("主席") > -1).sort(sortFn);
+            // V3.3: 嚴格過濾 -> (必須有「會長」且有「屆」)
+            const presidents = allArrived.filter(g => (g.title||"").indexOf("會長") > -1 && (g.title||"").indexOf("屆") > -1).sort(sortFn);
+            
+            // V3.3: 嚴格過濾 -> (必須有「主席」且有「屆」)
+            const chairmen = allArrived.filter(g => (g.title||"").indexOf("主席") > -1 && (g.title||"").indexOf("屆") > -1).sort(sortFn);
 
-            // 渲染列表
-            function addHeader(text) {
-                const h = document.createElement('div'); h.className = 'mc-header'; h.innerText = text; list.appendChild(h);
-            }
-            function addItem(g) {
+            function addItem(g, container) {
                 const d = document.createElement('div'); d.className = 'mc-item';
                 let timeStr = "--:--";
                 if(g.timestamp) {
@@ -583,11 +589,14 @@
                     timeStr = `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
                 }
                 d.innerHTML = `<div class="mc-time">${timeStr}</div><div class="mc-name">${g.name}</div><div class="mc-title">${g.title}</div>`;
-                list.appendChild(d);
+                container.appendChild(d);
             }
 
-            if(presidents.length > 0) { addHeader("👑 歷屆會長 (依屆次)"); presidents.forEach(addItem); }
-            if(chairmen.length > 0) { addHeader("🎩 歷屆主席 (依屆次)"); chairmen.forEach(addItem); }
+            if(presidents.length > 0) presidents.forEach(g => addItem(g, listP));
+            else listP.innerHTML = '<div style="padding:15px;text-align:center;color:#999;">(無)</div>';
+
+            if(chairmen.length > 0) chairmen.forEach(g => addItem(g, listC));
+            else listC.innerHTML = '<div style="padding:15px;text-align:center;color:#999;">(無)</div>';
         }
 
         function deleteGuest(uid) {
