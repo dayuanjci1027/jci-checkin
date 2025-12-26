@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V3.0 (實戰版)</title>
+    <title>JCI 報到系統 V3.1 (司儀優化版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -123,7 +123,8 @@
         .status-success { color: #28a745; }
         .status-warning { color: #ffc107; }
 
-        /* V3.0 MC Page Styles */
+        /* MC Page Styles */
+        .mc-header { background: #eee; color: #555; font-weight: bold; padding: 10px 20px; font-size: 1.1rem; margin-top: 20px; border-left: 5px solid var(--jci-blue); }
         .mc-item { background: white; padding: 20px; border-bottom: 2px solid #eee; display: flex; align-items: center; font-size: 1.2rem; }
         .mc-item:nth-child(odd) { background: #fafafa; }
         .mc-time { font-size: 1rem; color: #666; background: #eee; padding: 5px 10px; border-radius: 10px; margin-right: 15px; font-weight: bold; min-width: 60px; text-align: center;}
@@ -225,7 +226,7 @@
     </div>
 
     <div id="page-mc" class="page" style="background-color: var(--mc-bg);">
-        <h2 style="color:var(--jci-dark); margin:0 0 20px 0; text-align: center; border-bottom: 3px solid var(--jci-blue); padding-bottom: 10px;">🎤 司儀唱名表 (依抵達順序)</h2>
+        <h2 style="color:var(--jci-dark); margin:0 0 20px 0; text-align: center; border-bottom: 3px solid var(--jci-blue); padding-bottom: 10px;">🎤 司儀唱名表 (依屆次排序)</h2>
         <div id="mc-list" style="max-width: 800px; margin: 0 auto; box-shadow: 0 5px 20px rgba(0,0,0,0.05);"></div>
         <div id="mc-empty" style="text-align:center; color:#999; margin-top:50px; display:none; font-size: 1.5rem;">目前無會長/主席進場</div>
     </div>
@@ -263,7 +264,7 @@
         let allEvents = {};
         let html5QrCode = null; 
         let kioskQrCode = null; 
-        let kioskTimeout = null; // V3.0 自助報到逾時變數
+        let kioskTimeout = null; 
         let isScanning = false;
         let isScanningProcessing = false;
         let systemSettings = { locked: false, password: '123' };
@@ -361,7 +362,6 @@
             if(p !== 'reception') stopCamera(); 
             if(p !== 'kiosk') stopKiosk();
             
-            // V3.0: 進入 MC 頁面時刷新列表
             if(p === 'mc') renderMC();
 
             checkSystemLock();
@@ -402,7 +402,7 @@
                 guestsData = snap.val() || {};
                 renderReception();
                 renderDashboard();
-                renderMC(); // V3.0 更新 MC 列表
+                renderMC(); 
             });
             goPage('reception');
         }
@@ -417,7 +417,6 @@
             kioskQrCode.start({ facingMode: "user" }, { fps: 10, qrbox: { width: 300, height: 300 } }, onKioskScanSuccess)
             .catch(err => { console.error(err); Swal.fire("無法啟動前鏡頭", "請確認權限或使用 HTTPS", "error"); stopKiosk(); });
 
-            // V3.0 新增：15秒無操作自動返回待機
             clearTimeout(kioskTimeout);
             kioskTimeout = setTimeout(stopKiosk, 15000); 
         }
@@ -427,39 +426,34 @@
             document.getElementById('kiosk-scanner-container').style.display = 'none';
             document.getElementById('kiosk-standby').style.display = 'block';
             document.getElementById('kiosk-success-view').style.display = 'none';
-            clearTimeout(kioskTimeout); // 清除計時器
+            clearTimeout(kioskTimeout); 
         }
 
         function onKioskScanSuccess(uid) {
-            clearTimeout(kioskTimeout); // 掃到就清除計時
-
+            clearTimeout(kioskTimeout); 
             if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
             document.getElementById('kiosk-scanner-container').style.display = 'none';
             
             if(guestsData[uid]) {
                 const g = guestsData[uid];
                 const isDuplicate = g.arrived;
-
-                // 執行簽到
                 if(!isDuplicate) checkIn(uid, true);
 
-                // 顯示介面
                 document.getElementById('kiosk-success-view').style.display = 'block';
                 document.getElementById('kiosk-photo').src = getPhotoUrl(g.photo);
                 document.getElementById('kiosk-name').innerText = g.name;
                 document.getElementById('kiosk-title').innerText = g.title;
 
-                // V3.0 新增：重複報到顯示不同樣式
                 const statusText = document.getElementById('kiosk-status');
                 const statusIcon = document.getElementById('kiosk-icon');
                 if (isDuplicate) {
                     statusText.innerText = "已重複報到";
-                    statusText.style.color = "#ffc107"; // 黃色
+                    statusText.style.color = "#ffc107"; 
                     statusIcon.innerText = "⚠";
                     statusIcon.style.color = "#ffc107";
                 } else {
                     statusText.innerText = "報到成功";
-                    statusText.style.color = "#28a745"; // 綠色
+                    statusText.style.color = "#28a745"; 
                     statusIcon.innerText = "✔";
                     statusIcon.style.color = "#28a745";
                 }
@@ -531,12 +525,9 @@
             const search = document.getElementById('search-box').value.toUpperCase();
             list.innerHTML = '';
             Object.values(guestsData).sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0)).forEach(g => {
-                // V3.0 修改：搜尋範圍增加 g.title
                 if(search && g.name.indexOf(search) === -1 && (g.title || "").indexOf(search) === -1) return;
-                
                 const d = document.createElement('div');
                 d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
-                // V3.0 加上 onerror
                 d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${getPhotoUrl(g.photo)}" class="guest-photo-small" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
                 <div style="display:flex; gap:5px;">
                     <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>
@@ -546,48 +537,57 @@
             });
         }
 
-        // V3.0 新增：MC 頁面渲染邏輯
+        // V3.1 MC 頁面：依照會長主席屆數排序
         function renderMC() {
             const list = document.getElementById('mc-list');
             const emptyMsg = document.getElementById('mc-empty');
             list.innerHTML = '';
 
-            // 篩選：已簽到 AND (職稱包含 "會長" 或 "主席" OR 分類是 "Official")
-            let vips = Object.values(guestsData).filter(g => {
-                if (!g.arrived) return false;
-                const title = (g.title || "");
-                return title.indexOf("會長") > -1 || title.indexOf("主席") > -1 || g.group === 'Official';
-            });
+            let allVips = Object.values(guestsData).filter(g => g.arrived && (g.title || "").match(/會長|主席/));
 
-            if (vips.length === 0) {
-                emptyMsg.style.display = 'block';
-                return;
-            }
+            if (allVips.length === 0) { emptyMsg.style.display = 'block'; return; }
             emptyMsg.style.display = 'none';
 
-            // 排序：依照抵達時間 (先到的在上面，方便司儀依序唸)
-            vips.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
-            vips.forEach(g => {
-                const d = document.createElement('div');
-                d.className = 'mc-item';
+            // 輔助函數：解析權重 (年份/屆數) -> 越大代表越新
+            function parseWeight(title) {
+                if(!title) return 0;
+                if(title.indexOf("創會長") > -1) return 1; // 創會長排在最舊 (最小)
                 
-                // 時間格式化 HH:MM
+                // 優先抓取年份 (如 2025)
+                const yearMatch = title.match(/20\d{2}/);
+                if(yearMatch) return parseInt(yearMatch[0]);
+
+                // 其次抓取屆數 (如 40屆) -> 轉換成大概的年份 (假設 1985 + 屆數) 以便比較
+                const termMatch = title.match(/(\d+)屆/);
+                if(termMatch) return 1985 + parseInt(termMatch[1]);
+                
+                return 0; 
+            }
+
+            // 排序函數：權重大的排前面 (Desc)
+            const sortFn = (a, b) => parseWeight(b.title) - parseWeight(a.title);
+
+            // 分組：會長組 & 主席組
+            const presidents = allVips.filter(g => (g.title||"").indexOf("會長") > -1).sort(sortFn);
+            const chairmen = allVips.filter(g => (g.title||"").indexOf("主席") > -1).sort(sortFn);
+
+            // 渲染列表
+            function addHeader(text) {
+                const h = document.createElement('div'); h.className = 'mc-header'; h.innerText = text; list.appendChild(h);
+            }
+            function addItem(g) {
+                const d = document.createElement('div'); d.className = 'mc-item';
                 let timeStr = "--:--";
                 if(g.timestamp) {
                     const date = new Date(g.timestamp);
-                    const h = date.getHours().toString().padStart(2, '0');
-                    const m = date.getMinutes().toString().padStart(2, '0');
-                    timeStr = `${h}:${m}`;
+                    timeStr = `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
                 }
-
-                d.innerHTML = `
-                    <div class="mc-time">${timeStr}</div>
-                    <div class="mc-name">${g.name}</div>
-                    <div class="mc-title">${g.title}</div>
-                `;
+                d.innerHTML = `<div class="mc-time">${timeStr}</div><div class="mc-name">${g.name}</div><div class="mc-title">${g.title}</div>`;
                 list.appendChild(d);
-            });
+            }
+
+            if(presidents.length > 0) { addHeader("👑 歷屆會長 (依屆次)"); presidents.forEach(addItem); }
+            if(chairmen.length > 0) { addHeader("🎩 歷屆主席 (依屆次)"); chairmen.forEach(addItem); }
         }
 
         function deleteGuest(uid) {
@@ -621,7 +621,6 @@
                 const d = document.createElement('div');
                 let cardClass = 'vip-card'; if (!g.acked) cardClass += ' new-arrival';
                 d.className = cardClass; d.onclick = function() { ackGuest(g.id); }; d.style.cursor = "pointer";
-                // V3.0 加上 onerror
                 d.innerHTML = `<img src="${getPhotoUrl(g.photo)}" class="avatar" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'"><div style="font-weight:bold;margin-bottom:5px; font-size:2.5rem; line-height:1.2;">${g.name}</div><div style="font-size:1.5rem;color:#666;">${g.title}</div>`;
                 grid.appendChild(d);
             });
