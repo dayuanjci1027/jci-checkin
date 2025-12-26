@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V3.3 (司儀精準版)</title>
+    <title>JCI 報到系統 V3.4 (進場序版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -123,10 +123,11 @@
         .status-success { color: #28a745; }
         .status-warning { color: #ffc107; }
 
-        /* MC Page Styles */
+        /* V3.4 MC Page Styles - 修正標題與排序視覺 */
         .mc-layout { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; }
         .mc-column { flex: 1; min-width: 300px; background: white; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); overflow: hidden; }
-        .mc-header { background: #333; color: white; font-weight: bold; padding: 15px; font-size: 1.2rem; text-align: center; border-bottom: 3px solid var(--jci-blue); }
+        /* V3.4 標題顏色加深，增加對比 */
+        .mc-header { background: #005780; color: white; font-weight: bold; padding: 15px; font-size: 1.3rem; text-align: center; border-bottom: 3px solid #FFC107; letter-spacing: 1px; }
         .mc-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; font-size: 1.1rem; }
         .mc-item:nth-child(even) { background: #fafafa; }
         .mc-time { font-size: 0.9rem; color: #666; background: #eee; padding: 4px 8px; border-radius: 6px; margin-right: 12px; font-weight: bold; min-width: 50px; text-align: center;}
@@ -168,13 +169,13 @@
             <div class="nav-item" onclick="goPage('kiosk')">自助報到</div>
             <div class="nav-item" onclick="goPage('reception')">輸入端</div>
             <div class="nav-item" onclick="goPage('dashboard')">輸出端</div>
-            <div class="nav-item" onclick="goPage('mc')">司儀視角</div>
+            <div class="nav-item" onclick="goPage('mc')">會長、主席進場序</div>
         </div>
         <div class="mobile-dropdown" id="mobile-nav">
             <div class="nav-item" onclick="goPage('kiosk')">自助報到</div>
             <div class="nav-item" onclick="goPage('reception')">輸入端</div>
             <div class="nav-item" onclick="goPage('dashboard')">輸出端</div>
-            <div class="nav-item" onclick="goPage('mc')">司儀視角</div>
+            <div class="nav-item" onclick="goPage('mc')">會長、主席進場序</div>
         </div>
     </div>
 
@@ -228,15 +229,15 @@
     </div>
 
     <div id="page-mc" class="page" style="background-color: var(--mc-bg);">
-        <h2 style="color:var(--jci-dark); margin:0 0 20px 0; text-align: center; padding-bottom: 10px;">🎤 司儀唱名表</h2>
+        <h2 style="color:var(--jci-dark); margin:0 0 20px 0; text-align: center; padding-bottom: 10px;">🎤 會長、主席進場序</h2>
         
         <div class="mc-layout">
             <div class="mc-column">
-                <div class="mc-header">👑 本會歷屆會長 (依屆次)</div>
+                <div class="mc-header">👑 歷屆會長進場序 (新➜舊)</div>
                 <div id="mc-list-presidents"></div>
             </div>
             <div class="mc-column">
-                <div class="mc-header">🎩 本會歷屆主席 (依屆次)</div>
+                <div class="mc-header">🎩 歷屆主席進場序 (新➜舊)</div>
                 <div id="mc-list-chairmen"></div>
             </div>
         </div>
@@ -550,7 +551,7 @@
             });
         }
 
-        // V3.3 MC 頁面：精準過濾 + 左右並排
+        // V3.4 MC 頁面：修正排序 (大到小, 35屆 > 33屆)
         function renderMC() {
             const listP = document.getElementById('mc-list-presidents');
             const listC = document.getElementById('mc-list-chairmen');
@@ -566,19 +567,24 @@
 
             function parseWeight(title) {
                 if(!title) return 0;
-                if(title.indexOf("創會長") > -1) return 1; 
+                if(title.indexOf("創會長") > -1) return 1; // 創會長最小 (最後)
+                
                 const yearMatch = title.match(/20\d{2}/);
                 if(yearMatch) return parseInt(yearMatch[0]);
-                const termMatch = title.match(/(\d+)屆/);
+
+                // V3.4: 增強版 Regex，確保抓到 "第35屆" 或 "35 屆"
+                const termMatch = title.match(/(?:第|^|\s)(\d+)\s*屆/);
                 if(termMatch) return 1985 + parseInt(termMatch[1]);
+                
                 return 0; 
             }
+
+            // V3.4: 排序邏輯：b - a (大到小)。
+            // 35屆 (2020) - 33屆 (2018) = 正數 -> 35屆排在前面。正確！
             const sortFn = (a, b) => parseWeight(b.title) - parseWeight(a.title);
 
-            // V3.3: 嚴格過濾 -> (必須有「會長」且有「屆」)
+            // 過濾與排序
             const presidents = allArrived.filter(g => (g.title||"").indexOf("會長") > -1 && (g.title||"").indexOf("屆") > -1).sort(sortFn);
-            
-            // V3.3: 嚴格過濾 -> (必須有「主席」且有「屆」)
             const chairmen = allArrived.filter(g => (g.title||"").indexOf("主席") > -1 && (g.title||"").indexOf("屆") > -1).sort(sortFn);
 
             function addItem(g, container) {
