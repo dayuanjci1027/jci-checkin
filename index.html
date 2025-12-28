@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V3.4 (進場序版)</title>
+    <title>JCI 報到系統 V3.6 (後台專用版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -70,10 +70,6 @@
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .login-bg { display: flex; align-items: flex-start; justify-content: center; min-height: 80vh; padding: 20px; box-sizing: border-box; }
-        .login-card { background: white; width: 100%; max-width: 400px; padding: 30px; border-radius: 24px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.08); position: relative; overflow: hidden; margin-top: 10px; }
-        .login-logo { width: 70%; max-width: 220px; height: auto; margin: 0 auto 15px auto; display: block; }
-
         .styled-input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 1rem; margin-bottom: 15px; box-sizing: border-box; text-align: center; }
         .btn-gradient { width: 100%; padding: 14px; background: var(--bg-gradient); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: 0.3s; margin-top: 5px; box-shadow: 0 5px 15px rgba(0,151,215,0.3); }
         .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,151,215,0.4); }
@@ -91,7 +87,9 @@
         .guest-item { background: white; padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .guest-item.arrived { background: #f9f9f9; }
         .guest-photo-small { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #eee; margin-right: 12px; }
-        
+        /* V3.6 新增：人工報到標籤樣式 */
+        .manual-tag { font-size: 0.75rem; color: #856404; background-color: #fff3cd; padding: 2px 6px; border-radius: 4px; border: 1px solid #ffeeba; margin-left: 5px; white-space: nowrap; font-weight: bold; }
+
         #dashboard-grid { display: flex; flex-wrap: wrap; gap: 20px; padding: 10px; justify-content: center; }
         .vip-card { background: white; padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 260px; flex-grow: 1; max-width: 320px; border: 4px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .avatar { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 5px solid #f0f2f5; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
@@ -123,10 +121,9 @@
         .status-success { color: #28a745; }
         .status-warning { color: #ffc107; }
 
-        /* V3.4 MC Page Styles - 修正標題與排序視覺 */
+        /* MC Page Styles */
         .mc-layout { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; }
         .mc-column { flex: 1; min-width: 300px; background: white; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); overflow: hidden; }
-        /* V3.4 標題顏色加深，增加對比 */
         .mc-header { background: #005780; color: white; font-weight: bold; padding: 15px; font-size: 1.3rem; text-align: center; border-bottom: 3px solid #FFC107; letter-spacing: 1px; }
         .mc-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; font-size: 1.1rem; }
         .mc-item:nth-child(even) { background: #fafafa; }
@@ -184,8 +181,6 @@
         <div id="event-list" style="max-width: 600px; margin: 0 auto;">載入中...</div>
         <div class="fab" onclick="createNewEvent()">+</div>
     </div>
-
-    <div id="page-member" class="page"></div>
 
     <div id="page-kiosk" class="page">
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh;">
@@ -534,15 +529,21 @@
             isScanning = false;
         }
 
+        // V3.6: 在列表顯示「需人工」標籤
         function renderReception() {
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
             list.innerHTML = '';
             Object.values(guestsData).sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0)).forEach(g => {
                 if(search && g.name.indexOf(search) === -1 && (g.title || "").indexOf(search) === -1) return;
+                
+                // 判斷是否為「非正規UID」(可能沒有身分證)
+                const isManual = !String(g.id).startsWith('u');
+                const manualTag = isManual ? '<span class="manual-tag">⚠️ 需人工</span>' : '';
+
                 const d = document.createElement('div');
                 d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
-                d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${getPhotoUrl(g.photo)}" class="guest-photo-small" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
+                d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${getPhotoUrl(g.photo)}" class="guest-photo-small" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}${manualTag}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
                 <div style="display:flex; gap:5px;">
                     <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>
                     <button onclick="deleteGuest('${g.id}')" style="padding:6px 10px;border:none;border-radius:50%;background:#ffebee;color:#c62828;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑️</button>
@@ -551,7 +552,6 @@
             });
         }
 
-        // V3.4 MC 頁面：修正排序 (大到小, 35屆 > 33屆)
         function renderMC() {
             const listP = document.getElementById('mc-list-presidents');
             const listC = document.getElementById('mc-list-chairmen');
@@ -567,23 +567,15 @@
 
             function parseWeight(title) {
                 if(!title) return 0;
-                if(title.indexOf("創會長") > -1) return 1; // 創會長最小 (最後)
-                
+                if(title.indexOf("創會長") > -1) return 1; 
+                const termMatch = title.match(/(\d+)\s*屆/);
+                if(termMatch) return parseInt(termMatch[1]); 
                 const yearMatch = title.match(/20\d{2}/);
-                if(yearMatch) return parseInt(yearMatch[0]);
-
-                // V3.4: 增強版 Regex，確保抓到 "第35屆" 或 "35 屆"
-                const termMatch = title.match(/(?:第|^|\s)(\d+)\s*屆/);
-                if(termMatch) return 1985 + parseInt(termMatch[1]);
-                
+                if(yearMatch) return parseInt(yearMatch[0]) - 1990; 
                 return 0; 
             }
-
-            // V3.4: 排序邏輯：b - a (大到小)。
-            // 35屆 (2020) - 33屆 (2018) = 正數 -> 35屆排在前面。正確！
             const sortFn = (a, b) => parseWeight(b.title) - parseWeight(a.title);
 
-            // 過濾與排序
             const presidents = allArrived.filter(g => (g.title||"").indexOf("會長") > -1 && (g.title||"").indexOf("屆") > -1).sort(sortFn);
             const chairmen = allArrived.filter(g => (g.title||"").indexOf("主席") > -1 && (g.title||"").indexOf("屆") > -1).sort(sortFn);
 
@@ -676,6 +668,7 @@
                     const newData = {};
                     let count = 0;
                     data.forEach((row, index) => {
+                        // V3.6: 不再過濾沒有身分證的人，只要 GAS 回傳了，我們就全收
                         if (onlyInternal && row.group.toLowerCase() !== 'internal') return;
                         newData[row.id] = { id: row.id, name: row.name, title: row.title, group: row.group, photo: row.photo, arrived: false, timestamp: 0, originalIndex: index };
                         count++;
