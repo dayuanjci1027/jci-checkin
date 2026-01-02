@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V3.6 (後台專用版)</title>
+    <title>JCI 報到系統 V4.2 (林振暉會長製作)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -46,24 +46,37 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.05); z-index: 999; position: sticky; top: 0; height: 50px;
         }
         .hide-nav { display: none !important; }
-        .event-badge { background: #333; color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 5px; z-index: 1001; }
-        .nav-group { display: flex; gap: 5px; }
+        
+        .event-badge { background: #333; color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 5px; z-index: 1001; white-space: nowrap; }
+        
+        /* V4.2 新增：開發者署名樣式 */
+        .dev-signature {
+            font-size: 0.85rem; color: var(--jci-dark); font-weight: bold;
+            background: #e1f5fe; padding: 5px 12px; border-radius: 20px;
+            margin-left: 10px; white-space: nowrap; border: 1px solid #b3e5fc;
+            display: flex; align-items: center; gap: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .nav-group { display: flex; gap: 5px; margin-left: auto; } /* Push nav items to right */
         .nav-item { cursor: pointer; color: #666; font-weight: 500; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; }
         .nav-item.active { background: var(--jci-blue); color: white; box-shadow: 0 2px 10px rgba(0,151,215,0.3); }
-        .mobile-menu-btn { display: none; font-size: 1.8rem; cursor: pointer; color: var(--jci-dark); z-index: 1001; user-select: none; }
+        .mobile-menu-btn { display: none; font-size: 1.8rem; cursor: pointer; color: var(--jci-dark); z-index: 1001; user-select: none; margin-left: auto; }
         .mobile-dropdown {
             display: none; position: absolute; top: 70px; left: 0; width: 100%;
             background: white; flex-direction: column; box-shadow: 0 10px 20px rgba(0,0,0,0.1); border-bottom: 1px solid #eee; animation: slideDown 0.3s ease;
         }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-        @media (max-width: 768px) {
+        @media (max-width: 900px) {
             .nav-group { display: none; }
             .mobile-menu-btn { display: block; }
             .mobile-dropdown.show { display: flex; }
             .nav-item { border-radius: 0; padding: 15px; text-align: center; border-bottom: 1px solid #f5f5f5; font-size: 1.1rem; }
             .nav-item:last-child { border-bottom: none; }
             .nav-item.active { background: #e3f2fd; color: var(--jci-blue); box-shadow: none; }
+            /* Mobile adjustment for signature */
+            .dev-signature { font-size: 0.75rem; padding: 4px 8px; }
         }
 
         .page { display: none; flex: 1; overflow-y: auto; padding: 20px; animation: fadeIn 0.4s ease-out; }
@@ -87,7 +100,6 @@
         .guest-item { background: white; padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .guest-item.arrived { background: #f9f9f9; }
         .guest-photo-small { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #eee; margin-right: 12px; }
-        /* V3.6 新增：人工報到標籤樣式 */
         .manual-tag { font-size: 0.75rem; color: #856404; background-color: #fff3cd; padding: 2px 6px; border-radius: 4px; border: 1px solid #ffeeba; margin-left: 5px; white-space: nowrap; font-weight: bold; }
 
         #dashboard-grid { display: flex; flex-wrap: wrap; gap: 20px; padding: 10px; justify-content: center; }
@@ -131,6 +143,14 @@
         .mc-name { font-weight: bold; font-size: 1.5rem; margin-right: 10px; color: #333; }
         .mc-title { color: var(--jci-blue); font-weight: bold; font-size: 1.1rem; }
 
+        /* 活動結束橫幅 */
+        #event-closed-banner {
+            display: none;
+            background: #d32f2f; color: white; text-align: center; padding: 10px;
+            font-weight: bold; font-size: 1.1rem; position: sticky; top: 50px; z-index: 998;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
     </style>
 </head>
 <body>
@@ -161,6 +181,8 @@
         <div class="event-badge" onclick="goPage('home')" id="current-event-display">
             <span>🏠</span> 尚未選擇活動
         </div>
+        <div class="dev-signature">🏆 2023會長 林振暉 製作</div>
+
         <div class="mobile-menu-btn" onclick="toggleMenu()">☰</div>
         <div class="nav-group">
             <div class="nav-item" onclick="goPage('kiosk')">自助報到</div>
@@ -175,6 +197,8 @@
             <div class="nav-item" onclick="goPage('mc')">會長、主席進場序</div>
         </div>
     </div>
+
+    <div id="event-closed-banner">🛑 活動已結束 (報到關閉 / 唯讀模式)</div>
 
     <div id="page-home" class="page active">
         <h2 style="color:#333; text-align: center;">📅 活動列表</h2>
@@ -276,14 +300,15 @@
         let kioskTimeout = null; 
         let isScanning = false;
         let isScanningProcessing = false;
-        let systemSettings = { locked: false, password: '123' };
+        let systemSettings = { locked: false, password: '123', checkin_closed: false };
 
         db.ref('settings').on('value', snap => {
             if(snap.val()) {
                 systemSettings = snap.val();
                 checkSystemLock();
+                checkEventStatus(); 
             } else {
-                db.ref('settings').set({ locked: true, password: '1234' });
+                db.ref('settings').set({ locked: true, password: '1234', checkin_closed: false });
             }
         });
 
@@ -293,6 +318,17 @@
                 return;
             }
             document.getElementById('system-lock-screen').style.display = 'flex';
+        }
+
+        function checkEventStatus() {
+            const banner = document.getElementById('event-closed-banner');
+            if (systemSettings.checkin_closed) {
+                banner.style.display = 'block';
+                if (isScanning) stopCamera();
+                if (kioskQrCode) stopKiosk();
+            } else {
+                banner.style.display = 'none';
+            }
         }
 
         function unlockSystem() {
@@ -307,13 +343,21 @@
         }
 
         function adminSettings() {
+            const isClosed = systemSettings.checkin_closed;
             Swal.fire({
                 title: '⚙️ 系統設定',
                 html: `
-                    <div style="text-align:left; margin-bottom:10px;">目前狀態: ${systemSettings.locked ? '<span style="color:red;font-weight:bold;">已鎖定 (公開需密碼)</span>' : '<span style="color:green;font-weight:bold;">已公開 (免密碼)</span>'}</div>
+                    <div style="text-align:left; margin-bottom:10px;">頁面鎖定: ${systemSettings.locked ? '<span style="color:red;font-weight:bold;">🔒 鎖定</span>' : '<span style="color:green;font-weight:bold;">🔓 公開</span>'}</div>
                     <button id="toggle-lock-btn" class="btn-gradient" style="background:${systemSettings.locked?'#4caf50':'#f44336'}; margin-bottom:15px; padding:10px;">
                         ${systemSettings.locked ? '🔓 解除鎖定 (設為公開)' : '🔒 啟用鎖定 (設為私密)'}
                     </button>
+                    
+                    <hr>
+                    <div style="text-align:left; margin-bottom:10px;">活動狀態: ${isClosed ? '<span style="color:red;font-weight:bold;">🛑 已結束 (鎖定報到)</span>' : '<span style="color:green;font-weight:bold;">🟢 進行中</span>'}</div>
+                    <button id="toggle-close-btn" class="btn-gradient" style="background:${isClosed?'#2196f3':'#d32f2f'}; margin-bottom:15px; padding:10px;">
+                        ${isClosed ? '🟢 重啟活動 (允許報到)' : '🛑 結束活動 (關閉報到)'}
+                    </button>
+
                     <hr>
                     <h3 style="font-size:1rem; color:#666; margin:15px 0 10px; text-align:left;">📦 資料管理</h3>
                     <div class="settings-btn-grid">
@@ -334,6 +378,12 @@
                         db.ref('settings/locked').set(newStatus);
                         Swal.close();
                         Swal.fire('成功', newStatus ? '系統已上鎖' : '系統已公開', 'success');
+                    };
+                    document.getElementById('toggle-close-btn').onclick = () => {
+                        const newStatus = !systemSettings.checkin_closed;
+                        db.ref('settings/checkin_closed').set(newStatus);
+                        Swal.close();
+                        Swal.fire('設定更新', newStatus ? '活動已結束，報到功能已鎖定' : '活動已重啟，報到功能恢復', newStatus ? 'warning' : 'success');
                     };
                     document.getElementById('btn-sync').onclick = () => { Swal.close(); syncFromCloud(); };
                     document.getElementById('btn-export').onclick = () => { exportCSV(); };
@@ -377,6 +427,8 @@
         }
 
         function createNewEvent() {
+            if (systemSettings.checkin_closed) return Swal.fire("活動已結束", "請先重啟活動才能建立新活動", "warning");
+            
             Swal.fire({ title: '建立新活動', input: 'text', showCancelButton: true }).then((r) => {
                 if (r.isConfirmed && r.value) {
                     const id = 'evt_' + Date.now();
@@ -419,6 +471,8 @@
         // --- KIOSK 相關邏輯 ---
 
         function startKiosk() {
+            if (systemSettings.checkin_closed) return Swal.fire("活動已結束", "自助報到已關閉", "warning");
+
             document.getElementById('kiosk-standby').style.display = 'none';
             document.getElementById('kiosk-success-view').style.display = 'none';
             document.getElementById('kiosk-scanner-container').style.display = 'block';
@@ -443,6 +497,8 @@
             if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
             document.getElementById('kiosk-scanner-container').style.display = 'none';
             
+            if (systemSettings.checkin_closed) return Swal.fire("活動已結束", "報到無效", "error").then(() => stopKiosk());
+
             if(guestsData[uid]) {
                 const g = guestsData[uid];
                 const isDuplicate = g.arrived;
@@ -482,6 +538,8 @@
         function toggleCamera() { isScanning ? stopCamera() : startCamera(); }
         
         function startCamera() {
+            if (systemSettings.checkin_closed) return Swal.fire("活動已結束", "掃描功能已關閉", "warning");
+
             document.getElementById('scanner-view').style.display = 'block';
             document.getElementById('btn-cam').innerText = "❌ 關閉相機";
             document.getElementById('btn-cam').style.background = "#333";
@@ -490,6 +548,9 @@
             html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (uid)=>{
                 if(isScanningProcessing) return; 
                 isScanningProcessing = true;
+                
+                if (systemSettings.checkin_closed) return Swal.fire("活動已結束", "操作無效", "error").then(() => { isScanningProcessing = false; stopCamera(); });
+
                 if(guestsData[uid]) {
                     const g = guestsData[uid];
                     const isDuplicate = g.arrived;
@@ -529,7 +590,6 @@
             isScanning = false;
         }
 
-        // V3.6: 在列表顯示「需人工」標籤
         function renderReception() {
             const list = document.getElementById('reception-list');
             const search = document.getElementById('search-box').value.toUpperCase();
@@ -537,16 +597,23 @@
             Object.values(guestsData).sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0)).forEach(g => {
                 if(search && g.name.indexOf(search) === -1 && (g.title || "").indexOf(search) === -1) return;
                 
-                // 判斷是否為「非正規UID」(可能沒有身分證)
                 const isManual = !String(g.id).startsWith('u');
                 const manualTag = isManual ? '<span class="manual-tag">⚠️ 需人工</span>' : '';
+
+                const btnStyle = systemSettings.checkin_closed 
+                    ? "background:#999; cursor:not-allowed;" 
+                    : (g.arrived ? "background:#ccc;" : "background:var(--jci-blue);");
+                
+                const delStyle = systemSettings.checkin_closed 
+                    ? "background:#eee; color:#aaa; cursor:not-allowed;" 
+                    : "background:#ffebee; color:#c62828;";
 
                 const d = document.createElement('div');
                 d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
                 d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${getPhotoUrl(g.photo)}" class="guest-photo-small" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}${manualTag}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
                 <div style="display:flex; gap:5px;">
-                    <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;background:${g.arrived?'#ccc':'var(--jci-blue)'};color:white;font-weight:bold;">${g.arrived?'取消':'簽到'}</button>
-                    <button onclick="deleteGuest('${g.id}')" style="padding:6px 10px;border:none;border-radius:50%;background:#ffebee;color:#c62828;cursor:pointer;display:flex;align-items:center;justify-content:center;">🗑️</button>
+                    <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;color:white;font-weight:bold;${btnStyle}">${g.arrived?'取消':'簽到'}</button>
+                    <button onclick="deleteGuest('${g.id}')" style="padding:6px 10px;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;${delStyle}">🗑️</button>
                 </div>`;
                 list.appendChild(d);
             });
@@ -598,12 +665,16 @@
         }
 
         function deleteGuest(uid) {
+            if (systemSettings.checkin_closed) return Swal.fire("活動已結束", "資料已鎖定，無法刪除", "warning");
+
             Swal.fire({ title: '確定刪除?', text: "刪除後無法復原", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6', confirmButtonText: '刪除', cancelButtonText: '取消' }).then((result) => {
                 if (result.isConfirmed) { db.ref(`events_data/${currentEventId}/${uid}`).remove(); Swal.fire('已刪除', '', 'success'); }
             })
         }
 
         function checkIn(id, status) {
+            if (systemSettings.checkin_closed) return Swal.fire("活動已結束", "無法變更簽到狀態", "warning");
+
             db.ref(`events_data/${currentEventId}/${id}`).update({ arrived: status, timestamp: status ? firebase.database.ServerValue.TIMESTAMP : 0, acked: status ? false : null });
         }
 
@@ -635,6 +706,8 @@
         function ackGuest(id) { db.ref(`events_data/${currentEventId}/${id}`).update({ acked: true }); }
         
         function addNewGuest() {
+            if (systemSettings.checkin_closed) return Swal.fire("活動已結束", "無法新增來賓", "warning");
+
             Swal.fire({
                 title: '新增現場來賓', html: `<div id="swal-form-grid"><input id="swal-name" class="swal-large-input" placeholder="姓名"><input id="swal-title" class="swal-large-input" placeholder="職稱"><select id="swal-group" class="swal-large-input"><option value="External">友會貴賓</option><option value="Official">長官</option><option value="Internal">本會會員</option></select></div>`,
                 customClass: { popup: 'swal-wide-popup' }, showCancelButton: true, confirmButtonText: '新增',
@@ -652,11 +725,15 @@
         }
 
         function clearGuestList() {
+            if (systemSettings.checkin_closed) return Swal.fire("活動已結束", "資料已鎖定", "warning");
+
             if(!confirm("確定清空所有名單？活動將保留，但簽到資料會消失。")) return;
             db.ref(`events_data/${currentEventId}`).remove().then(() => Swal.fire("已清空", "名單已重置", "success"));
         }
 
         function syncFromCloud() {
+            if (systemSettings.checkin_closed) return Swal.fire("活動已結束", "資料已鎖定，無法同步", "warning");
+
             Swal.fire({
                 title: '請選擇同步來源', text: "這將會覆蓋目前的初始名單", icon: 'question', showCancelButton: true, confirmButtonText: '僅會內會員 (Internal)', confirmButtonColor: '#0097D7', showDenyButton: true, denyButtonText: '全體名單 (All Data)', denyButtonColor: '#28a745', cancelButtonText: '取消'
             }).then((result) => {
@@ -664,12 +741,14 @@
                 const onlyInternal = result.isConfirmed; 
                 Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
                 
-                fetch(`${GOOGLE_SCRIPT_URL}?op=get_all&_t=${new Date().getTime()}`).then(r => r.json()).then(data => {
+                const typeParam = onlyInternal ? 'internal' : 'all'; 
+                
+                fetch(`${GOOGLE_SCRIPT_URL}?op=get_all&type=${typeParam}&_t=${new Date().getTime()}`).then(r => r.json()).then(data => {
+                    if(data.status === 'error') return Swal.fire("錯誤", data.msg, "error");
+
                     const newData = {};
                     let count = 0;
                     data.forEach((row, index) => {
-                        // V3.6: 不再過濾沒有身分證的人，只要 GAS 回傳了，我們就全收
-                        if (onlyInternal && row.group.toLowerCase() !== 'internal') return;
                         newData[row.id] = { id: row.id, name: row.name, title: row.title, group: row.group, photo: row.photo, arrived: false, timestamp: 0, originalIndex: index };
                         count++;
                     });
