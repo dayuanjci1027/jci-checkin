@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V4.4 (單一鎖定+署名優化)</title>
+    <title>JCI 報到系統 V4.5 (防擠版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -39,37 +39,43 @@
         }
         .lock-icon { font-size: 4rem; color: var(--jci-dark); margin-bottom: 20px; }
 
-        /* 導航列 V4.4 優化版 */
+        /* 導航列 V4.5 防擠壓優化 */
         #nav-bar { 
             background: rgba(255, 255, 255, 0.98); 
-            padding: 5px 15px; display: flex; justify-content: space-between; align-items: center; 
+            padding: 5px 10px; /* 縮小左右間距 */
+            display: flex; justify-content: space-between; align-items: center; 
             box-shadow: 0 4px 20px rgba(0,0,0,0.05); z-index: 999; position: sticky; top: 0; height: 60px;
             gap: 5px;
         }
         
-        /* 左側活動按鈕 */
+        /* 左側活動按鈕：設定彈性收縮 (flex-shrink: 1) */
         .event-badge { 
             background: #333; color: white; padding: 6px 12px; border-radius: 20px; 
             font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 5px; 
-            z-index: 1001; white-space: nowrap; max-width: 45%; overflow: hidden; text-overflow: ellipsis;
+            z-index: 1001; white-space: nowrap; 
+            overflow: hidden; text-overflow: ellipsis; /* 超出變 ... */
+            flex: 0 1 auto; /* 允許縮小，但不允許放大 */
+            min-width: 0; /* 關鍵：讓 flex item 可以縮小到內容以下 */
+            max-width: 200px; /* 電腦版最大寬度 */
         }
         
-        /* V4.4 署名樣式：預設電腦版 (單行) */
+        /* 署名樣式：電腦版 */
         .dev-signature {
             font-size: 0.8rem; color: #005780; font-weight: bold;
             background: #e1f5fe; padding: 4px 10px; border-radius: 20px;
             border: 1px solid #b3e5fc; white-space: nowrap;
             display: flex; align-items: center; gap: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            margin-left: auto; /* 電腦版靠右 */
+            margin-left: auto; 
             margin-right: 10px;
+            flex-shrink: 0; /* 絕對不准縮小署名 */
         }
         
         .nav-group { display: flex; gap: 5px; }
         .nav-item { cursor: pointer; color: #666; font-weight: 500; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; }
         .nav-item.active { background: var(--jci-blue); color: white; box-shadow: 0 2px 10px rgba(0,151,215,0.3); }
         
-        .mobile-menu-btn { display: none; font-size: 1.8rem; cursor: pointer; color: var(--jci-dark); z-index: 1001; user-select: none; }
+        .mobile-menu-btn { display: none; font-size: 1.8rem; cursor: pointer; color: var(--jci-dark); z-index: 1001; user-select: none; flex-shrink: 0; }
         
         .mobile-dropdown {
             display: none; position: absolute; top: 65px; left: 0; width: 100%;
@@ -77,7 +83,7 @@
         }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* V4.4 手機版樣式調整 */
+        /* V4.5 手機版 RWD 調整 */
         @media (max-width: 900px) {
             .nav-group { display: none; }
             .mobile-menu-btn { display: block; }
@@ -87,21 +93,26 @@
             .nav-item:last-child { border-bottom: none; }
             .nav-item.active { background: #e3f2fd; color: var(--jci-blue); box-shadow: none; }
             
-            /* 手機版署名：改為上下排列，字體縮小，絕不擠壓 */
+            /* 手機版：活動名稱強制縮短，避免擠到署名 */
+            .event-badge { 
+                max-width: 120px; /* 手機上限制寬度 */
+            }
+
+            /* 手機版：署名樣式 (上下排、縮小、靠右) */
             .dev-signature { 
-                flex-direction: column; /* 上下排 */
-                align-items: flex-end; /* 靠右對齊 */
+                flex-direction: column; 
+                align-items: flex-end; 
                 justify-content: center;
-                font-size: 0.65rem; /* 字體縮小 */
+                font-size: 0.65rem; 
                 line-height: 1.1;
-                padding: 2px 5px;
-                background: transparent; /* 移除背景讓視覺更清爽 */
+                padding: 0;
+                background: transparent; 
                 border: none; 
                 box-shadow: none;
-                margin-left: auto; /* 推到最右邊 */
-                margin-right: 5px; /* 貼近漢堡選單 */
+                margin-left: auto; 
+                margin-right: 8px; /* 跟漢堡選單保持距離 */
             }
-            .dev-signature span { display: block; }
+            .dev-signature span { display: block; text-align: right; }
         }
 
         .page { display: none; flex: 1; overflow-y: auto; padding: 20px; animation: fadeIn 0.4s ease-out; }
@@ -119,7 +130,6 @@
             gap: 15px; 
         }
         .event-card.active { background: #e3f2fd; border-color: var(--jci-blue); }
-        /* V4.3 新增：已鎖定活動的樣式 */
         .event-card.closed { background: #fff5f5; border-color: #ffcdd2; }
         .event-info { flex: 1; min-width: 0; text-align: left; }
         .event-btn { flex-shrink: 0; white-space: nowrap; background: var(--jci-blue); color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-weight: bold; }
@@ -331,23 +341,22 @@
         let kioskTimeout = null; 
         let isScanning = false;
         let isScanningProcessing = false;
-        let systemSettings = { locked: false, password: '123' };
+        let systemSettings = { locked: false, password: '123', checkin_closed: false };
 
-        // 監聽系統全域設定 (只管頁面鎖定/密碼)
         db.ref('settings').on('value', snap => {
             if(snap.val()) {
                 systemSettings = snap.val();
                 checkSystemLock();
             } else {
-                db.ref('settings').set({ locked: true, password: '1234' });
+                db.ref('settings').set({ locked: true, password: '1234', checkin_closed: false });
             }
         });
 
-        // 監聽所有活動 (用於檢查個別活動是否關閉)
+        // V4.4: 監聽活動變動
         db.ref('events_meta').on('value', snap => {
             allEvents = snap.val() || {};
             renderEventList();
-            checkEventStatus(); // 每次活動資料變動都檢查一下目前狀態
+            checkEventStatus(); 
         });
 
         function checkSystemLock() {
@@ -358,10 +367,9 @@
             document.getElementById('system-lock-screen').style.display = 'flex';
         }
 
-        // V4.4: 檢查「目前活動」的鎖定狀態 (非全域)
+        // V4.4: 單一活動檢查
         function checkEventStatus() {
             const banner = document.getElementById('event-closed-banner');
-            // 如果有選活動，且該活動被標記為 closed
             if (currentEventId && allEvents[currentEventId] && allEvents[currentEventId].closed) {
                 banner.style.display = 'block';
                 if (isScanning) stopCamera();
@@ -383,7 +391,7 @@
         }
 
         function adminSettings() {
-            // 判斷目前活動是否鎖定
+            // V4.4: 取得目前活動的鎖定狀態
             let isCurrentEventClosed = false;
             if (currentEventId && allEvents[currentEventId] && allEvents[currentEventId].closed) {
                 isCurrentEventClosed = true;
@@ -392,7 +400,7 @@
             Swal.fire({
                 title: '⚙️ 系統設定',
                 html: `
-                    <div style="text-align:left; margin-bottom:10px;">全站鎖定: ${systemSettings.locked ? '<span style="color:red;font-weight:bold;">🔒 鎖定 (需密碼)</span>' : '<span style="color:green;font-weight:bold;">🔓 公開</span>'}</div>
+                    <div style="text-align:left; margin-bottom:10px;">全站鎖定: ${systemSettings.locked ? '<span style="color:red;font-weight:bold;">🔒 鎖定</span>' : '<span style="color:green;font-weight:bold;">🔓 公開</span>'}</div>
                     <button id="toggle-lock-btn" class="btn-gradient" style="background:${systemSettings.locked?'#4caf50':'#f44336'}; margin-bottom:15px; padding:10px;">
                         ${systemSettings.locked ? '🔓 解除全站鎖定' : '🔒 啟用全站鎖定'}
                     </button>
@@ -421,7 +429,6 @@
                 showCancelButton: true,
                 confirmButtonText: '儲存變更',
                 didOpen: () => {
-                    // 全站鎖定
                     document.getElementById('toggle-lock-btn').onclick = () => {
                         const newStatus = !systemSettings.locked;
                         db.ref('settings/locked').set(newStatus);
@@ -429,11 +436,11 @@
                         Swal.fire('成功', newStatus ? '系統已上鎖' : '系統已公開', 'success');
                     };
                     
-                    // V4.4: 單一活動鎖定 (寫入 events_meta/{id}/closed)
                     if(document.getElementById('toggle-close-btn')) {
                         document.getElementById('toggle-close-btn').onclick = () => {
                             if (!currentEventId) return;
                             const newStatus = !isCurrentEventClosed;
+                            // V4.4: 寫入單一活動的 closed 狀態
                             db.ref(`events_meta/${currentEventId}`).update({ closed: newStatus });
                             Swal.close();
                             Swal.fire('設定更新', newStatus ? '此活動已結束，報到功能已鎖定' : '此活動已重啟，報到功能恢復', newStatus ? 'warning' : 'success');
@@ -453,6 +460,8 @@
                 }
             });
         }
+
+        db.ref('events_meta').on('value', snap => { allEvents = snap.val() || {}; renderEventList(); });
 
         function toggleMenu() { document.getElementById('mobile-nav').classList.toggle('show'); }
 
@@ -480,10 +489,10 @@
         }
 
         function createNewEvent() {
+            // V4.4: 建立活動不受目前活動狀態影響，除非全站鎖定
             Swal.fire({ title: '建立新活動', input: 'text', showCancelButton: true }).then((r) => {
                 if (r.isConfirmed && r.value) {
                     const id = 'evt_' + Date.now();
-                    // V4.4: 建立時預設 closed: false
                     db.ref('events_meta/' + id).set({ id: id, name: r.value, created: Date.now(), closed: false });
                     selectEvent(id, r.value);
                 }
@@ -524,7 +533,6 @@
                 renderDashboard();
                 renderMC(); 
             });
-            // 進入活動時，檢查該活動是否鎖定
             checkEventStatus();
             goPage('reception');
         }
@@ -559,7 +567,6 @@
             if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
             document.getElementById('kiosk-scanner-container').style.display = 'none';
             
-            // V4.4: 再次檢查
             if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "報到無效", "error").then(() => stopKiosk());
 
             if(guestsData[uid]) {
@@ -601,7 +608,6 @@
         function toggleCamera() { isScanning ? stopCamera() : startCamera(); }
         
         function startCamera() {
-            // V4.4 檢查
             if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "掃描功能已關閉", "warning");
 
             document.getElementById('scanner-view').style.display = 'block';
@@ -659,7 +665,6 @@
             const search = document.getElementById('search-box').value.toUpperCase();
             list.innerHTML = '';
             
-            // V4.4: 取得目前活動的鎖定狀態
             const isEventClosed = (allEvents[currentEventId] && allEvents[currentEventId].closed);
 
             Object.values(guestsData).sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0)).forEach(g => {
@@ -668,7 +673,6 @@
                 const isManual = !String(g.id).startsWith('u');
                 const manualTag = isManual ? '<span class="manual-tag">⚠️ 需人工</span>' : '';
 
-                // 根據單一活動鎖定狀態決定樣式
                 const btnStyle = isEventClosed 
                     ? "background:#999; cursor:not-allowed;" 
                     : (g.arrived ? "background:#ccc;" : "background:var(--jci-blue);");
