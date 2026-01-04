@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V4.8 (活動資訊完整版)</title>
+    <title>JCI 報到系統 V4.9 (編輯功能版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -359,7 +359,7 @@
             }
         });
 
-        // V4.8: 監聽活動變動
+        // V4.9: 監聽活動變動
         db.ref('events_meta').on('value', snap => {
             allEvents = snap.val() || {};
             renderEventList();
@@ -415,6 +415,10 @@
                     </button>
                     
                     <hr>
+                    <button id="btn-edit-meta" class="btn-gradient" style="background:#607d8b; margin-bottom:15px; padding:10px; ${!currentEventId ? 'display:none;' : ''}">
+                        ✏️ 修改活動資訊 (名稱/日期/主席)
+                    </button>
+
                     <div style="text-align:left; margin-bottom:10px;">
                         目前活動 (${allEvents[currentEventId] ? allEvents[currentEventId].name : '未選擇'}): 
                         ${isCurrentEventClosed ? '<span style="color:red;font-weight:bold;">🛑 已結束</span>' : '<span style="color:green;font-weight:bold;">🟢 進行中</span>'}
@@ -445,6 +449,40 @@
                         Swal.fire('成功', newStatus ? '系統已上鎖' : '系統已公開', 'success');
                     };
                     
+                    // V4.9: 實作修改活動資訊功能
+                    if(document.getElementById('btn-edit-meta')) {
+                        document.getElementById('btn-edit-meta').onclick = () => {
+                            if(!currentEventId) return;
+                            const evt = allEvents[currentEventId];
+                            Swal.fire({
+                                title: '修改活動資訊',
+                                html: `
+                                    <input id="edit-name" class="swal2-input" placeholder="活動名稱" value="${evt.name}">
+                                    <input id="edit-date" type="date" class="swal2-input" style="margin-top:10px;" value="${evt.eventDate || ''}">
+                                    <input id="edit-chair" class="swal2-input" placeholder="主席姓名" style="margin-top:10px;" value="${evt.chairman || ''}">
+                                `,
+                                showCancelButton: true,
+                                confirmButtonText: '更新',
+                                preConfirm: () => {
+                                    return {
+                                        name: document.getElementById('edit-name').value,
+                                        date: document.getElementById('edit-date').value,
+                                        chair: document.getElementById('edit-chair').value
+                                    };
+                                }
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    db.ref('events_meta/' + currentEventId).update({
+                                        name: result.value.name,
+                                        eventDate: result.value.date,
+                                        chairman: result.value.chair
+                                    });
+                                    Swal.fire('成功', '活動資訊已更新', 'success');
+                                }
+                            });
+                        };
+                    }
+
                     if(document.getElementById('toggle-close-btn')) {
                         document.getElementById('toggle-close-btn').onclick = () => {
                             if (!currentEventId) return;
@@ -497,9 +535,7 @@
         }
 
         function createNewEvent() {
-            if (systemSettings.checkin_closed) return Swal.fire("活動已結束", "請先重啟活動才能建立新活動", "warning");
-            
-            // V4.8: 建立活動表單升級 (名稱、日期、主席)
+            // V4.9: 移除舊版的全域鎖定檢查，現在您可以自由建立新活動
             Swal.fire({ 
                 title: '建立新活動', 
                 html: `
@@ -522,8 +558,8 @@
                     db.ref('events_meta/' + id).set({ 
                         id: id, 
                         name: r.value.name, 
-                        eventDate: r.value.date, // 新增
-                        chairman: r.value.chair, // 新增
+                        eventDate: r.value.date, 
+                        chairman: r.value.chair, 
                         created: Date.now(), 
                         closed: false 
                     });
@@ -540,7 +576,7 @@
                 const isClosed = evt.closed ? true : false;
                 div.className = `event-card ${evt.id === currentEventId ? 'active' : ''} ${isClosed ? 'closed' : ''}`;
                 
-                // V4.8: 顯示優化 (日期、主席)
+                // V4.9: 顯示優化
                 const displayDate = evt.eventDate ? evt.eventDate : "(未設定日期)";
                 const displayChair = evt.chairman ? evt.chairman : "(未設定)";
                 const createdStr = new Date(evt.created).toLocaleDateString();
@@ -551,7 +587,7 @@
                             ${isClosed ? '🔒 ' : ''}${evt.name}
                         </div>
                         <div style="font-size:0.95rem; color:#555; margin-bottom: 5px;">
-                            📅 ${displayDate} &nbsp;|&nbsp; 👤 主席：${displayChair}
+                            📅 ${displayDate}  |  👤 主席：${displayChair}
                         </div>
                         <div style="font-size:0.8rem; color:#999;">
                             建檔：${createdStr}
