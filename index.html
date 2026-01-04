@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V4.7 (按鈕縮放版)</title>
+    <title>JCI 報到系統 V4.8 (活動資訊完整版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -39,11 +39,11 @@
         }
         .lock-icon { font-size: 4rem; color: var(--jci-dark); margin-bottom: 20px; }
 
-        /* 導航列 V4.7 優化版 */
+        /* 導航列 */
         #nav-bar { 
             background: rgba(255, 255, 255, 0.98); 
             padding: 8px 15px; 
-            display: flex; justify-content: flex-start; /* 改為靠左開始排列 */
+            display: flex; justify-content: flex-start; 
             align-items: center; 
             box-shadow: 0 4px 20px rgba(0,0,0,0.05); z-index: 999; 
             position: sticky; top: 0; 
@@ -52,34 +52,27 @@
             gap: 10px;
         }
         
-        /* V4.7 左側活動按鈕：Fit Content */
+        /* 左側活動按鈕 */
         .event-badge { 
             background: #333; color: white; padding: 8px 15px; border-radius: 20px; 
             font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 5px; 
             z-index: 1001; 
-            
-            /* 關鍵修改：不貪婪，適應內容 */
             flex: 0 1 auto; 
             width: fit-content; 
-            
-            white-space: normal; /* 允許換行 */
+            white-space: normal; 
             word-break: break-word; 
             line-height: 1.3;
             text-align: left;
-            
-            /* 上限控制，避免撞到右邊 */
             max-width: 50%; 
         }
         
-        /* 署名樣式：電腦版 */
+        /* 署名樣式 */
         .dev-signature {
             font-size: 0.8rem; color: #005780; font-weight: bold;
             background: #e1f5fe; padding: 4px 10px; border-radius: 20px;
             border: 1px solid #b3e5fc; white-space: nowrap;
             display: flex; align-items: center; gap: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            
-            /* 靠右推 */
             margin-left: auto; 
             margin-right: 10px;
             flex-shrink: 0; 
@@ -97,7 +90,6 @@
         }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* V4.7 手機版 RWD 調整 */
         @media (max-width: 900px) {
             .nav-group { display: none; }
             .mobile-menu-btn { display: block; }
@@ -107,14 +99,12 @@
             .nav-item:last-child { border-bottom: none; }
             .nav-item.active { background: #e3f2fd; color: var(--jci-blue); box-shadow: none; }
             
-            /* 手機版：稍微放寬最大寬度，但依然保持適應內容 */
             .event-badge { 
                 max-width: 60%; 
                 font-size: 0.85rem;
                 padding: 6px 12px;
             }
 
-            /* 手機版：署名樣式 */
             .dev-signature { 
                 flex-direction: column; 
                 align-items: flex-end; 
@@ -125,7 +115,7 @@
                 background: transparent; 
                 border: none; 
                 box-shadow: none;
-                margin-left: auto; /* 確保它把左邊的空間都推開，保持在右邊 */
+                margin-left: auto; 
                 margin-right: 5px; 
             }
             .dev-signature span { display: block; text-align: right; }
@@ -369,7 +359,7 @@
             }
         });
 
-        // V4.7: 監聽活動變動
+        // V4.8: 監聽活動變動
         db.ref('events_meta').on('value', snap => {
             allEvents = snap.val() || {};
             renderEventList();
@@ -384,12 +374,10 @@
             document.getElementById('system-lock-screen').style.display = 'flex';
         }
 
-        // V4.7: 單一活動檢查
         function checkEventStatus() {
             const banner = document.getElementById('event-closed-banner');
             if (currentEventId && allEvents[currentEventId] && allEvents[currentEventId].closed) {
                 banner.style.display = 'block';
-                // 這裡可以用 JS 動態計算 top
                 const navHeight = document.getElementById('nav-bar').offsetHeight;
                 banner.style.position = 'sticky';
                 banner.style.top = navHeight + 'px';
@@ -413,7 +401,6 @@
         }
 
         function adminSettings() {
-            // V4.7: 取得目前活動的鎖定狀態
             let isCurrentEventClosed = false;
             if (currentEventId && allEvents[currentEventId] && allEvents[currentEventId].closed) {
                 isCurrentEventClosed = true;
@@ -462,7 +449,6 @@
                         document.getElementById('toggle-close-btn').onclick = () => {
                             if (!currentEventId) return;
                             const newStatus = !isCurrentEventClosed;
-                            // V4.7: 寫入單一活動的 closed 狀態
                             db.ref(`events_meta/${currentEventId}`).update({ closed: newStatus });
                             Swal.close();
                             Swal.fire('設定更新', newStatus ? '此活動已結束，報到功能已鎖定' : '此活動已重啟，報到功能恢復', newStatus ? 'warning' : 'success');
@@ -511,12 +497,37 @@
         }
 
         function createNewEvent() {
-            // V4.7: 建立活動不受目前活動狀態影響，除非全站鎖定
-            Swal.fire({ title: '建立新活動', input: 'text', showCancelButton: true }).then((r) => {
+            if (systemSettings.checkin_closed) return Swal.fire("活動已結束", "請先重啟活動才能建立新活動", "warning");
+            
+            // V4.8: 建立活動表單升級 (名稱、日期、主席)
+            Swal.fire({ 
+                title: '建立新活動', 
+                html: `
+                    <div style="margin-bottom:10px;">請輸入活動資訊</div>
+                    <input id="swal-evt-name" class="swal2-input" placeholder="活動名稱 (必填)">
+                    <input id="swal-evt-date" type="date" class="swal2-input" style="margin-top:10px;">
+                    <input id="swal-evt-chair" class="swal2-input" placeholder="主席姓名 (選填)" style="margin-top:10px;">
+                `, 
+                showCancelButton: true,
+                preConfirm: () => {
+                    const name = document.getElementById('swal-evt-name').value;
+                    const date = document.getElementById('swal-evt-date').value;
+                    const chair = document.getElementById('swal-evt-chair').value;
+                    if(!name) return Swal.showValidationMessage('請輸入活動名稱');
+                    return { name: name, date: date, chair: chair };
+                }
+            }).then((r) => {
                 if (r.isConfirmed && r.value) {
                     const id = 'evt_' + Date.now();
-                    db.ref('events_meta/' + id).set({ id: id, name: r.value, created: Date.now(), closed: false });
-                    selectEvent(id, r.value);
+                    db.ref('events_meta/' + id).set({ 
+                        id: id, 
+                        name: r.value.name, 
+                        eventDate: r.value.date, // 新增
+                        chairman: r.value.chair, // 新增
+                        created: Date.now(), 
+                        closed: false 
+                    });
+                    selectEvent(id, r.value.name);
                 }
             });
         }
@@ -529,13 +540,21 @@
                 const isClosed = evt.closed ? true : false;
                 div.className = `event-card ${evt.id === currentEventId ? 'active' : ''} ${isClosed ? 'closed' : ''}`;
                 
+                // V4.8: 顯示優化 (日期、主席)
+                const displayDate = evt.eventDate ? evt.eventDate : "(未設定日期)";
+                const displayChair = evt.chairman ? evt.chairman : "(未設定)";
+                const createdStr = new Date(evt.created).toLocaleDateString();
+
                 div.innerHTML = `
                     <div class="event-info">
-                        <div style="font-weight:bold; font-size: 1.1rem; margin-bottom: 5px;">
+                        <div style="font-weight:bold; font-size: 1.2rem; margin-bottom: 5px; line-height:1.2;">
                             ${isClosed ? '🔒 ' : ''}${evt.name}
                         </div>
-                        <div style="font-size:0.9rem;color:#888">
-                            ${new Date(evt.created).toLocaleDateString()}
+                        <div style="font-size:0.95rem; color:#555; margin-bottom: 5px;">
+                            📅 ${displayDate} &nbsp;|&nbsp; 👤 主席：${displayChair}
+                        </div>
+                        <div style="font-size:0.8rem; color:#999;">
+                            建檔：${createdStr}
                             ${isClosed ? '<span style="color:red; font-weight:bold; margin-left:5px;">(已結束)</span>' : ''}
                         </div>
                     </div>
@@ -562,7 +581,6 @@
         // --- KIOSK 相關邏輯 ---
 
         function startKiosk() {
-            // V4.7: 檢查單一活動狀態
             if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "自助報到已關閉", "warning");
 
             document.getElementById('kiosk-standby').style.display = 'none';
@@ -589,7 +607,6 @@
             if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
             document.getElementById('kiosk-scanner-container').style.display = 'none';
             
-            // V4.7: 再次檢查
             if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "報到無效", "error").then(() => stopKiosk());
 
             if(guestsData[uid]) {
@@ -631,7 +648,6 @@
         function toggleCamera() { isScanning ? stopCamera() : startCamera(); }
         
         function startCamera() {
-            // V4.7 檢查
             if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "掃描功能已關閉", "warning");
 
             document.getElementById('scanner-view').style.display = 'block';
