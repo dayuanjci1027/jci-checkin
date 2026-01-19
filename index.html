@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V5.1 (完整版)</title>
+    <title>JCI 報到系統 V5.2</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -313,7 +313,6 @@
             if(snap.val()) {
                 systemSettings = snap.val();
                 checkSystemLock();
-                checkEventStatus();
             } else {
                 db.ref('settings').set({ locked: true, password: '1234', checkin_closed: false });
             }
@@ -366,30 +365,34 @@
                 isCurrentEventClosed = true;
             }
 
-            // ★★★ 已自動填入您的 LIFF ID ★★★
             const LIFF_BASE_URL = "https://liff.line.me/2008926390-8WXG7Jxq"; 
+
+            // 除錯：直接顯示目前抓到的 ID
+            let debugInfo = currentEventId 
+                ? `<span style="color:green;font-weight:bold;">${allEvents[currentEventId]?.name} (ID: ${currentEventId})</span>` 
+                : `<span style="color:red;font-weight:bold;">未選擇活動 (ID 為空)</span>`;
 
             Swal.fire({
                 title: '⚙️ 系統設定',
                 html: `
+                    <div style="background:#f0f2f5; padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.9rem;">
+                        <strong>目前鎖定活動：</strong><br>${debugInfo}
+                    </div>
+
                     <div style="text-align:left; margin-bottom:10px;">全站鎖定: ${systemSettings.locked ? '<span style="color:red;font-weight:bold;">🔒 鎖定</span>' : '<span style="color:green;font-weight:bold;">🔓 公開</span>'}</div>
                     <button id="toggle-lock-btn" class="btn-gradient" style="background:${systemSettings.locked?'#4caf50':'#f44336'}; margin-bottom:15px; padding:10px;">
                         ${systemSettings.locked ? '🔓 解除全站鎖定' : '🔒 啟用全站鎖定'}
                     </button>
                     
                     <hr>
-                    <button id="btn-show-qr" class="btn-gradient" style="background:#673ab7; margin-bottom:15px; padding:10px; ${!currentEventId ? 'display:none;' : ''}">
+                    <button id="btn-show-qr" class="btn-gradient" style="background:#673ab7; margin-bottom:15px; padding:10px; ${!currentEventId ? 'opacity:0.5;cursor:not-allowed;' : ''}">
                         📱 顯示本場活動簽到 QR Code
                     </button>
 
                     <button id="btn-edit-meta" class="btn-gradient" style="background:#607d8b; margin-bottom:15px; padding:10px; ${!currentEventId ? 'display:none;' : ''}">
-                        ✏️ 修改活動資訊 (名稱/日期/主席)
+                        ✏️ 修改活動資訊
                     </button>
 
-                    <div style="text-align:left; margin-bottom:10px;">
-                        目前活動 (${allEvents[currentEventId] ? allEvents[currentEventId].name : '未選擇'}): 
-                        ${isCurrentEventClosed ? '<span style="color:red;font-weight:bold;">🛑 已結束</span>' : '<span style="color:green;font-weight:bold;">🟢 進行中</span>'}
-                    </div>
                     <button id="toggle-close-btn" class="btn-gradient" style="background:${isCurrentEventClosed?'#2196f3':'#d32f2f'}; margin-bottom:15px; padding:10px; ${!currentEventId ? 'display:none;' : ''}">
                         ${isCurrentEventClosed ? '🟢 重啟此活動 (允許報到)' : '🛑 結束此活動 (關閉報到)'}
                     </button>
@@ -416,10 +419,13 @@
                         Swal.fire('成功', newStatus ? '系統已上鎖' : '系統已公開', 'success');
                     };
                     
-                    // ★★★ V5.1 新增：顯示 LIFF QR Code (使用 API 生成圖片) ★★★
+                    // V5.2 修正：產生 QR Code
                     if(document.getElementById('btn-show-qr')) {
                         document.getElementById('btn-show-qr').onclick = () => {
-                            if(!currentEventId) return;
+                            if(!currentEventId) {
+                                Swal.showValidationMessage("錯誤：目前沒有選擇活動 ID");
+                                return;
+                            }
                             
                             const targetUrl = `${LIFF_BASE_URL}?eventId=${currentEventId}`;
                             const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(targetUrl)}`;
@@ -432,7 +438,6 @@
                                     </div>
                                     <p style="color:#333; font-weight:bold;">${allEvents[currentEventId].name}</p>
                                     <p style="color:#666; font-size:0.9rem;">請會員使用 LINE 掃描此碼</p>
-                                    <p style="color:#999; font-size:0.8rem; margin-top:10px;">(此碼包含活動 ID，每場活動都不同)</p>
                                     <a href="${targetUrl}" target="_blank" style="display:block; margin-top:15px; color:#0097D7; font-size:0.9rem;">直接開啟連結測試</a>
                                 `,
                                 showCloseButton: true,
