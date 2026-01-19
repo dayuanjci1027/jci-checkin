@@ -57,9 +57,9 @@
     </div>
 
     <script>
-        // ★★★ 設定區 (請記得填入) ★★★
-        const MY_LIFF_ID = "請填入您的LIFF_ID"; 
-        const GAS_API_URL = "請填入剛剛部署的_GAS_URL"; // 例如 https://script.google.com/.../exec
+        // ★★★ 已自動填入您的資料 ★★★
+        const MY_LIFF_ID = "2008926390-8WXG7Jxq"; 
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyT00r1ap5CkHkuyj3htQ0-AuU65CkidhsxWftaNjWe_9iPgKs6HlaLfqBDPqkV2dUDMQ/exec";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDLq7SrkQaCnjtsFArh0leKPJRbPFZTZnk",
@@ -155,7 +155,7 @@
             checkInRef.update({
                 arrived: true,
                 timestamp: firebase.database.ServerValue.TIMESTAMP,
-                acked: false // 觸發大螢幕閃爍
+                acked: false // 觸發大螢幕閃爍 (沿用原有邏輯)
             }).then(() => {
                 // 顯示成功畫面
                 document.getElementById('checkin-view').classList.add('hidden');
