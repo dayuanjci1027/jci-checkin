@@ -69,31 +69,23 @@
         let memberData = null;
 
         window.onload = function() {
-            // 1. 嘗試從網址抓 ID
             const urlParams = new URLSearchParams(window.location.search);
             let urlId = urlParams.get('eventId');
 
-            // 2. 如果網址有 ID，先存起來當備份 (保險一)
             if (urlId) {
                 localStorage.setItem('jci_target_event_id', urlId);
                 currentEventId = urlId;
             } else {
-                // 3. 如果網址沒有 ID (可能剛從登入回來)，去備份撈撈看
                 currentEventId = localStorage.getItem('jci_target_event_id');
             }
 
-            // 4. 如果還是沒有，才報錯
             if(!currentEventId) {
                 return Swal.fire("錯誤", "無法取得活動 ID (請重新掃描 QR Code)", "error");
             }
 
-            // 開始 LIFF
             liff.init({ liffId: MY_LIFF_ID }).then(() => {
                 if (!liff.isLoggedIn()) {
-                    // 保險二：登入時，強制指定回程網址要包含現在的參數
-                    // 這樣登入回來網址就不會爛掉
                     if (window.location.search.indexOf('eventId') === -1) {
-                         // 如果當前網址不乾淨，我們手動組一個乾淨的帶去登入
                          const cleanUrl = window.location.origin + window.location.pathname + "?eventId=" + currentEventId;
                          liff.login({ redirectUri: cleanUrl });
                     } else {

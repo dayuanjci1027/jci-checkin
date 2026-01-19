@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V5.2</title>
+    <title>JCI 報到系統 V5.5 (直連版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -313,6 +313,7 @@
             if(snap.val()) {
                 systemSettings = snap.val();
                 checkSystemLock();
+                checkEventStatus();
             } else {
                 db.ref('settings').set({ locked: true, password: '1234', checkin_closed: false });
             }
@@ -364,8 +365,6 @@
             if (currentEventId && allEvents[currentEventId] && allEvents[currentEventId].closed) {
                 isCurrentEventClosed = true;
             }
-
-            const LIFF_BASE_URL = "https://liff.line.me/2008926390-8WXG7Jxq"; 
 
             // 除錯：直接顯示目前抓到的 ID
             let debugInfo = currentEventId 
@@ -419,7 +418,7 @@
                         Swal.fire('成功', newStatus ? '系統已上鎖' : '系統已公開', 'success');
                     };
                     
-                    // V5.2 修正：產生 QR Code
+                    // ★★★ V5.5 修正：使用直連網址 (自動偵測路徑) ★★★
                     if(document.getElementById('btn-show-qr')) {
                         document.getElementById('btn-show-qr').onclick = () => {
                             if(!currentEventId) {
@@ -427,7 +426,15 @@
                                 return;
                             }
                             
-                            const targetUrl = `${LIFF_BASE_URL}?eventId=${currentEventId}`;
+                            // 自動抓取當前頁面的網址，並切換到 liff.html
+                            // 例如：https://.../jci-checkin/index.html -> https://.../jci-checkin/liff.html
+                            let baseUrl = window.location.href.split('?')[0]; 
+                            // 移除 index.html (如果有的話)
+                            baseUrl = baseUrl.replace('/index.html', '').replace('/reception', '').replace('/kiosk', '');
+                            // 確保結尾沒有斜線
+                            if(baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+                            
+                            const targetUrl = `${baseUrl}/liff.html?eventId=${currentEventId}`;
                             const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(targetUrl)}`;
                             
                             Swal.fire({
@@ -438,6 +445,7 @@
                                     </div>
                                     <p style="color:#333; font-weight:bold;">${allEvents[currentEventId].name}</p>
                                     <p style="color:#666; font-size:0.9rem;">請會員使用 LINE 掃描此碼</p>
+                                    <p style="color:#999; font-size:0.8rem; margin-top:10px;">(V5.5 直連模式：穩定不掉參數)</p>
                                     <a href="${targetUrl}" target="_blank" style="display:block; margin-top:15px; color:#0097D7; font-size:0.9rem;">直接開啟連結測試</a>
                                 `,
                                 showCloseButton: true,
