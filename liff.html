@@ -3,153 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>JCI 診斷模式</title>
+    <title>JCI 快速通關</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans TC', sans-serif; background: #f0f2f5; text-align: center; padding: 20px; word-break: break-all; }
-        .debug-box { background: #333; color: #0f0; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: left; font-family: monospace; font-size: 0.8rem; }
-        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 50px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 20px; color: white; background: #0097D7; }
+        body { font-family: 'Noto Sans TC', sans-serif; background: #f0f2f5; text-align: center; padding: 20px; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:90vh; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 400px; transition: all 0.3s; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 50px; font-size: 1.3rem; font-weight: bold; cursor: pointer; margin-top: 25px; color: white; transition: 0.2s; letter-spacing: 2px; }
+        .btn-blue { background: linear-gradient(135deg, #0097D7 0%, #005780 100%); box-shadow: 0 5px 20px rgba(0,151,215,0.4); }
+        .btn-blue:active { transform: scale(0.95); }
+        .avatar { width: 120px; height: 120px; border-radius: 50%; border: 5px solid #f0f2f5; margin-bottom: 15px; object-fit: cover; }
         .hidden { display: none; }
+        .scan-line { height: 4px; width: 100%; background: #0097D7; animation: scan 1.5s infinite alternate; }
+        @keyframes scan { from { transform: scaleX(0.2); opacity: 0.5; } to { transform: scaleX(1); opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <div id="debug-info" class="debug-box">
-        <strong>🔍 網址診斷數據：</strong><br>
-        <hr style="border-color:#555;">
-        <div id="url-full">載入中...</div>
-        <div id="url-params" style="color:yellow; margin-top:5px;"></div>
-        <div id="liff-status" style="color:cyan; margin-top:5px;">LIFF 初始化...</div>
-    </div>
-
     <div id="loading-view" class="card">
-        <h2>🔄 讀取中...</h2>
+        <div class="scan-line"></div>
+        <h2 style="margin-top:20px;">身分識別中...</h2>
+        <p style="color:#666;">請稍候，正在連線資料庫</p>
     </div>
 
     <div id="checkin-view" class="card hidden">
-        <img id="user-photo" style="width:100px;height:100px;border-radius:50%;" src="">
-        <h2 id="user-name"></h2>
-        <span id="user-title" style="background:#eee;padding:5px 10px;border-radius:10px;"></span>
-        <hr style="margin:20px 0;">
-        <h3 id="event-name" style="color:#005780;"></h3>
-        <p id="event-date"></p>
-        <button id="btn-checkin" class="btn" onclick="doCheckIn()">📍 點我簽到</button>
+        <img id="user-photo" class="avatar" src="https://cdn-icons-png.flaticon.com/512/847/847969.png">
+        <h2 id="user-name" style="margin-bottom:5px;"></h2>
+        <span id="user-title" style="background:#eee; padding:4px 10px; border-radius:15px; font-size:0.9rem; color:#555;"></span>
+        <hr style="border:0; border-top:1px dashed #ddd; margin:25px 0;">
+        <div style="text-align:left; padding-left:10px;">
+            <div style="font-size:0.8rem; color:#999;">目前活動</div>
+            <div id="event-name" style="font-size:1.1rem; font-weight:bold; color:#005780;"></div>
+            <div id="event-date" style="font-size:0.9rem; color:#666;"></div>
+        </div>
+        <button id="btn-checkin" class="btn btn-blue" onclick="doCheckIn()">👆 點我簽到</button>
     </div>
 
-    <div id="success-view" class="card hidden">
-        <h1 style="color:green;">✔ 簽到成功</h1>
+    <div id="success-view" class="card hidden" style="text-align:center;">
+        <div style="font-size:5rem; color:#28a745; line-height:1;">✔</div>
+        <h1 style="color:#28a745; margin:10px 0;">簽到成功</h1>
+        <p style="color:#666;">歡迎蒞臨！</p>
+        <p style="font-size:0.8rem; color:#999; margin-top:20px;">您可以關閉此視窗了</p>
     </div>
 
     <script>
-        // 設定區
         const MY_LIFF_ID = "2008926390-8WXG7Jxq"; 
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyT00r1ap5CkHkuyj3htQ0-AuU65CkidhsxWftaNjWe_9iPgKs6HlaLfqBDPqkV2dUDMQ/exec";
 
-        // 1. 馬上印出網址，抓出參數是否真的不見了
-        const fullUrl = window.location.href;
-        const searchParams = window.location.search;
-        document.getElementById('url-full').innerText = "完整網址: " + fullUrl;
-        document.getElementById('url-params').innerText = "參數部分: " + (searchParams || "(無參數!!)");
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLq7SrkQaCnjtsFArh0leKPJRbPFZTZnk",
+            authDomain: "checkin2025-f0bb9.firebaseapp.com",
+            databaseURL: "https://checkin2025-f0bb9-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "checkin2025-f0bb9",
+            storageBucket: "checkin2025-f0bb9.firebasestorage.app",
+            messagingSenderId: "526526638146",
+            appId: "1:526526638146:web:c69e758e8b3c1d5990e5db"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        // 2. 嘗試解析 ID
-        const urlParams = new URLSearchParams(searchParams);
-        let currentEventId = urlParams.get('eventId');
+        let currentEventId = "";
+        let memberData = null;
 
-        // 如果上面抓不到，嘗試從 LIFF 自帶的 liff.state 抓 (有些手機會藏在這裡)
-        if (!currentEventId && urlParams.get('liff.state')) {
-             const state = new URLSearchParams(urlParams.get('liff.state'));
-             currentEventId = state.get('eventId');
-             document.getElementById('url-params').innerText += "\n(從 liff.state 抓到 ID: " + currentEventId + ")";
-        }
+        window.onload = function() {
+            // 1. 嘗試從網址抓 ID
+            const urlParams = new URLSearchParams(window.location.search);
+            let urlId = urlParams.get('eventId');
 
-        // 顯示結果
-        if (!currentEventId) {
-            Swal.fire({
-                icon: 'error',
-                title: '抓不到活動 ID',
-                text: '請看上方黑底綠字的診斷區，參數是否為 (無參數)？',
-                allowOutsideClick: false
-            });
-        } else {
-            // 有抓到 ID，才繼續執行 Firebase 與 LIFF
-            startSystem();
-        }
+            // 2. 如果網址有 ID，先存起來當備份 (保險一)
+            if (urlId) {
+                localStorage.setItem('jci_target_event_id', urlId);
+                currentEventId = urlId;
+            } else {
+                // 3. 如果網址沒有 ID (可能剛從登入回來)，去備份撈撈看
+                currentEventId = localStorage.getItem('jci_target_event_id');
+            }
 
-        function startSystem() {
-            const firebaseConfig = {
-                apiKey: "AIzaSyDLq7SrkQaCnjtsFArh0leKPJRbPFZTZnk",
-                authDomain: "checkin2025-f0bb9.firebaseapp.com",
-                databaseURL: "https://checkin2025-f0bb9-default-rtdb.asia-southeast1.firebasedatabase.app",
-                projectId: "checkin2025-f0bb9",
-                storageBucket: "checkin2025-f0bb9.firebasestorage.app",
-                messagingSenderId: "526526638146",
-                appId: "1:526526638146:web:c69e758e8b3c1d5990e5db"
-            };
-            if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-            const db = firebase.database();
-            let memberData = null;
+            // 4. 如果還是沒有，才報錯
+            if(!currentEventId) {
+                return Swal.fire("錯誤", "無法取得活動 ID (請重新掃描 QR Code)", "error");
+            }
 
+            // 開始 LIFF
             liff.init({ liffId: MY_LIFF_ID }).then(() => {
-                document.getElementById('liff-status').innerText = "LIFF: 已連線";
                 if (!liff.isLoggedIn()) {
-                    liff.login();
+                    // 保險二：登入時，強制指定回程網址要包含現在的參數
+                    // 這樣登入回來網址就不會爛掉
+                    if (window.location.search.indexOf('eventId') === -1) {
+                         // 如果當前網址不乾淨，我們手動組一個乾淨的帶去登入
+                         const cleanUrl = window.location.origin + window.location.pathname + "?eventId=" + currentEventId;
+                         liff.login({ redirectUri: cleanUrl });
+                    } else {
+                         liff.login({ redirectUri: window.location.href });
+                    }
                 } else {
                     liff.getProfile().then(profile => {
                         verifyIdentity(profile.userId);
                     });
                 }
             }).catch(err => {
-                document.getElementById('liff-status').innerText = "LIFF 錯誤: " + err;
+                Swal.fire("錯誤", "LIFF 初始化失敗: " + err, "error");
             });
+        };
 
-            function verifyIdentity(lineId) {
-                fetch(`${GAS_API_URL}?op=verify_line&uid=${lineId}`)
-                    .then(res => res.json())
-                    .then(res => {
-                        if (res.found) {
-                            memberData = res.member;
-                            renderCheckInPage(memberData, db);
-                        } else {
-                            document.getElementById('loading-view').classList.add('hidden');
-                            Swal.fire('無法識別身分', '您的 LINE 尚未綁定', 'error');
-                        }
-                    });
-            }
-
-            function renderCheckInPage(mem, db) {
-                document.getElementById('loading-view').classList.add('hidden');
-                document.getElementById('checkin-view').classList.remove('hidden');
-                document.getElementById('user-name').innerText = mem.name;
-                document.getElementById('user-title').innerText = mem.title;
-                if(mem.photo) document.getElementById('user-photo').src = mem.photo;
-
-                db.ref('events_meta/' + currentEventId).once('value').then(snap => {
-                    const evt = snap.val();
-                    if(evt) {
-                        document.getElementById('event-name').innerText = evt.name;
-                        document.getElementById('event-date').innerText = evt.eventDate || "本日活動";
+        function verifyIdentity(lineId) {
+            fetch(`${GAS_API_URL}?op=verify_line&uid=${lineId}`)
+                .then(res => res.json())
+                .then(res => {
+                    if (res.found) {
+                        memberData = res.member;
+                        renderCheckInPage(memberData);
+                    } else {
+                        document.getElementById('loading-view').classList.add('hidden');
+                        Swal.fire({
+                            icon: 'error',
+                            title: '無法識別身分',
+                            text: '您的 LINE 帳號尚未綁定或非本會會員。',
+                            footer: 'Line ID: ' + lineId
+                        });
                     }
+                })
+                .catch(err => {
+                    Swal.fire("連線錯誤", "無法連接伺服器，請重試", "error");
                 });
-                
-                // 綁定按鈕事件 (避免 scope 問題)
-                document.getElementById('btn-checkin').onclick = function() {
-                     const btn = document.getElementById('btn-checkin');
-                     btn.disabled = true; btn.innerText = "寫入中...";
-                     db.ref(`events_data/${currentEventId}/${mem.id}`).update({
-                        arrived: true,
-                        timestamp: firebase.database.ServerValue.TIMESTAMP,
-                        acked: false
-                    }).then(() => {
-                        document.getElementById('checkin-view').classList.add('hidden');
-                        document.getElementById('success-view').classList.remove('hidden');
-                    });
-                };
-            }
+        }
+
+        function renderCheckInPage(mem) {
+            document.getElementById('loading-view').classList.add('hidden');
+            document.getElementById('checkin-view').classList.remove('hidden');
+
+            document.getElementById('user-name').innerText = mem.name;
+            document.getElementById('user-title').innerText = mem.title || "貴賓";
+            if(mem.photo) document.getElementById('user-photo').src = mem.photo;
+
+            db.ref('events_meta/' + currentEventId).once('value').then(snap => {
+                const evt = snap.val();
+                if(evt) {
+                    document.getElementById('event-name').innerText = evt.name;
+                    document.getElementById('event-date').innerText = evt.eventDate || "本日活動";
+                }
+            });
+        }
+
+        function doCheckIn() {
+            if(!memberData || !currentEventId) return;
+            const btn = document.getElementById('btn-checkin');
+            btn.disabled = true; btn.innerText = "寫入中...";
+
+            const checkInRef = db.ref(`events_data/${currentEventId}/${memberData.id}`);
+            checkInRef.update({
+                arrived: true,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                acked: false
+            }).then(() => {
+                document.getElementById('checkin-view').classList.add('hidden');
+                document.getElementById('success-view').classList.remove('hidden');
+                if (navigator.vibrate) navigator.vibrate(200);
+            }).catch(err => {
+                Swal.fire("簽到失敗", err.message, "error");
+                btn.disabled = false; btn.innerText = "👆 點我簽到";
+            });
         }
     </script>
 </body>
