@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V6.2 (防呆優化版)</title>
+    <title>JCI 報到系統 V6.4 (Kiosk雙模修正版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -26,42 +26,6 @@
             font-family: 'Noto Sans TC', sans-serif; margin: 0; background: #f0f2f5; 
             height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;
         }
-
-        /* 掃碼盒專用輸入區 */
-        .scanner-box-container {
-            background: #fff; padding: 20px; border-radius: 15px; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px;
-            text-align: center; border: 3px solid var(--jci-blue);
-        }
-        .scanner-status { font-weight: bold; color: var(--jci-dark); margin-bottom: 10px; }
-        #scanner-input {
-            width: 80%; padding: 15px; font-size: 1.2rem; text-align: center;
-            border: 2px solid #ddd; border-radius: 10px; background: #f9f9f9;
-            transition: all 0.3s;
-            ime-mode: disabled; /* 嘗試禁用輸入法 */
-        }
-        #scanner-input:focus {
-            border-color: #00C853; background: #fff; box-shadow: 0 0 10px rgba(0,200,83,0.3);
-            outline: none;
-        }
-        .scanner-hint { font-size: 0.8rem; color: #d32f2f; margin-top: 8px; font-weight: bold; }
-
-        /* 自助報到待機畫面樣式 */
-        .kiosk-waiting-box {
-            background: white; padding: 40px 20px; border-radius: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.1); text-align: center;
-            width: 90%; max-width: 500px;
-            display: flex; flex-direction: column; align-items: center;
-        }
-        .pulse-ring {
-            width: 150px; height: 150px; border-radius: 50%;
-            background: #e3f2fd; display: flex; align-items: center; justify-content: center;
-            margin-bottom: 30px; animation: pulse-ring 2s infinite;
-        }
-        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(0, 151, 215, 0.4); } 70% { box-shadow: 0 0 0 30px rgba(0, 151, 215, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 151, 215, 0); } }
-        
-        .kiosk-instruction { font-size: 1.5rem; font-weight: bold; color: #333; margin-bottom: 10px; }
-        .kiosk-sub-instruction { font-size: 1.1rem; color: #666; margin-bottom: 30px; }
 
         /* 系統鎖定遮罩 */
         #system-lock-screen {
@@ -152,12 +116,32 @@
         #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
 
+        /* KIOSK 雙模樣式 */
+        .kiosk-waiting-box {
+            background: white; padding: 40px 20px; border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1); text-align: center;
+            width: 90%; max-width: 500px;
+            display: flex; flex-direction: column; align-items: center;
+            border: 4px solid var(--jci-blue); /* 強調這是輸入區 */
+        }
+        
+        /* 掃碼盒輸入框 (Kiosk用) */
+        #kiosk-input {
+            width: 90%; padding: 15px; font-size: 1.3rem; text-align: center;
+            border: 2px solid #ddd; border-radius: 12px; background: #f9f9f9;
+            margin-bottom: 20px; ime-mode: disabled;
+        }
+        #kiosk-input:focus {
+            border-color: #00C853; background: #fff; box-shadow: 0 0 15px rgba(0,200,83,0.3);
+            outline: none;
+        }
+
         #kiosk-camera-btn { 
-            width: 100%; padding: 15px; border-radius: 12px; font-size: 1.2rem; 
-            background: #fff; color: var(--jci-blue); border: 2px solid var(--jci-blue); 
+            width: 100%; padding: 15px; border-radius: 12px; font-size: 1.1rem; 
+            background: #fff; color: #666; border: 2px solid #eee; 
             font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; 
         }
-        #kiosk-camera-btn:hover { background: var(--jci-blue); color: white; }
+        #kiosk-camera-btn:hover { background: #eee; color: #333; }
 
         #kiosk-scanner-container { display: none; width: 100%; max-width: 500px; background: black; border-radius: 25px; overflow: hidden; margin: 20px auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
         #kiosk-success-view { display: none; text-align: center; }
@@ -254,17 +238,19 @@
     <div id="page-kiosk" class="page">
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh;">
             
-            <div id="kiosk-standby" class="kiosk-waiting-box">
-                <div class="pulse-ring">
-                    <div style="font-size: 4rem;">📦</div>
-                </div>
-                <div class="kiosk-instruction">請將 QR Code 對準下方掃碼盒</div>
-                <div class="kiosk-sub-instruction">嗶一聲即完成報到</div>
+            <div id="kiosk-standby" class="kiosk-waiting-box" onclick="document.getElementById('kiosk-input').focus()">
+                <div class="kiosk-instruction" style="color:var(--jci-blue); margin-bottom:15px;">📡 掃碼盒待命中</div>
                 
-                <hr style="width:100%; border:0; border-top:1px dashed #ddd; margin: 20px 0;">
+                <input type="url" id="kiosk-input" inputmode="latin" 
+                       placeholder="點此啟用 (請切換英文輸入)" 
+                       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" autofocus>
+                
+                <div class="kiosk-sub-instruction" style="font-size:0.9rem; color:#d32f2f;">⚠️ 如出現注音，請切換 iPad 輸入法</div>
+                
+                <div style="margin: 20px 0; color:#999;">- 或 -</div>
                 
                 <button id="kiosk-camera-btn" onclick="startKioskCamera()">
-                    📷 沒有反應？點此開啟鏡頭掃描
+                    📷 沒帶卡？點此開啟鏡頭掃描
                 </button>
             </div>
 
@@ -288,15 +274,6 @@
 
     <div id="page-reception" class="page">
         <h2 style="margin-bottom:20px; text-align: center;">輸入端 (櫃台)</h2>
-        
-        <div class="scanner-box-container" onclick="document.getElementById('scanner-input').focus()">
-            <div class="scanner-status">📦 掃碼盒待命中...</div>
-            <input type="url" id="scanner-input" inputmode="latin" 
-                   placeholder="點此啟用掃碼 (請切換至英文輸入法!!)" 
-                   autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" autofocus>
-            <div class="scanner-hint">⚠️ 如果出現注音亂碼，請切換 iPad 輸入法為 English (US)</div>
-        </div>
-
         <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px; font-size: 1.2rem;" onclick="toggleCamera()">📷 掃描 QR (後鏡頭)</button>
         
         <div style="background:white; padding:15px; border-radius:10px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; border:1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
@@ -363,8 +340,6 @@
         let isScanning = false;
         let isScanningProcessing = false;
         let systemSettings = { locked: false, password: '123', checkin_closed: false };
-        let kioskScanBuffer = "";
-        let kioskBufferTimeout = null;
 
         db.ref('settings').on('value', snap => {
             if(snap.val()) {
@@ -545,10 +520,10 @@
             if(p !== 'reception') stopCamera(); 
             if(p !== 'kiosk') stopKiosk();
             
-            // V6.0: 只要切換到 Reception，自動 focus 掃碼框
-            if(p === 'reception') {
+            // V6.4: 只要切換到 Kiosk，自動 focus 掃碼框
+            if(p === 'kiosk') {
                 setTimeout(() => { 
-                    const input = document.getElementById('scanner-input');
+                    const input = document.getElementById('kiosk-input');
                     if(input) input.focus(); 
                 }, 500);
             }
@@ -635,10 +610,10 @@
                 renderMC(); 
             });
             checkEventStatus();
-            goPage('reception');
+            goPage('reception'); // 進入後預設先去櫃台，但您可以自己切到 Kiosk
         }
 
-        // --- V6.1 KIOSK 雙模邏輯 ---
+        // --- V6.4 KIOSK 雙模邏輯 ---
 
         function startKioskCamera() {
             if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "自助報到已關閉", "warning");
@@ -659,44 +634,32 @@
             document.getElementById('kiosk-scanner-container').style.display = 'none';
             document.getElementById('kiosk-standby').style.display = 'flex'; // 回到待機畫面
             document.getElementById('kiosk-success-view').style.display = 'none';
+            
+            // 重新把焦點放回輸入框，方便下一位用掃碼盒
+            setTimeout(() => { document.getElementById('kiosk-input').focus(); }, 100);
+            
             clearTimeout(kioskTimeout); 
         }
 
         function onKioskScanSuccess(uid) {
-            handleKioskInput(uid); // 共用處理邏輯
+            handleKioskInput(uid); 
         }
 
-        // V6.1: Kiosk 頁面的全域鍵盤監聽 (給掃碼盒用)
+        // V6.4: Kiosk 頁面的輸入監聽
         document.addEventListener('keypress', function (e) {
             // 如果現在是在 Kiosk 頁面
             if(document.getElementById('page-kiosk').classList.contains('active')) {
                 // 如果相機正在開著，就不監聽 (避免衝突)
                 if(document.getElementById('kiosk-scanner-container').style.display === 'block') return;
 
-                if(e.key === 'Enter') {
-                    if(kioskScanBuffer) {
-                        handleKioskInput(kioskScanBuffer);
-                        kioskScanBuffer = "";
-                    }
-                } else {
-                    kioskScanBuffer += e.key;
-                    // 設定超時清除 (防止亂碼堆積)
-                    clearTimeout(kioskBufferTimeout);
-                    kioskBufferTimeout = setTimeout(() => { kioskScanBuffer = ""; }, 500); // 500ms 內沒輸入完視為無效
-                }
-            }
-            
-            // 原本 Reception 頁面的監聽 (保持不變)
-            if(document.getElementById('page-reception').classList.contains('active')) {
-                const input = document.getElementById('scanner-input');
-                if(document.activeElement !== input && document.activeElement !== document.getElementById('search-box')) {
-                    input.focus();
-                }
+                const input = document.getElementById('kiosk-input');
+                // 確保焦點在輸入框
+                if(document.activeElement !== input) input.focus();
+
                 if (e.key === 'Enter') {
-                    if(document.activeElement === document.getElementById('search-box')) return;
                     const code = input.value.trim();
                     if(code) {
-                        // V6.2: 檢查是否包含中文（注音輸入錯誤）
+                        // V6.4: 檢查是否包含中文
                         if (/[\u3105-\u3129\u02CA\u02C7\u02CB\u02D9]/.test(code)) {
                             Swal.fire({
                                 icon: 'warning',
@@ -707,19 +670,21 @@
                             input.value = '';
                             return;
                         }
-                        handleScan(code); // 這是 reception 用的
+                        handleKioskInput(code);
                         input.value = '';
                     }
                 }
             }
+            
+            // Reception 頁面不需要了，因為您說要用 Kiosk 做
         });
 
-        // V6.1: Kiosk 統一處理邏輯 (盒掃 or 相機掃 都走這)
+        // V6.4: Kiosk 統一處理邏輯
         function handleKioskInput(uid) {
             clearTimeout(kioskTimeout); 
             if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
             
-            // V6.2: 檢查是否包含中文（注音輸入錯誤）
+            // V6.4: 檢查注音
             if (/[\u3105-\u3129\u02CA\u02C7\u02CB\u02D9]/.test(uid)) {
                 Swal.fire({
                     icon: 'warning',
@@ -730,7 +695,6 @@
                 return;
             }
 
-            // 確保相機關閉，顯示成功畫面
             document.getElementById('kiosk-scanner-container').style.display = 'none';
             document.getElementById('kiosk-standby').style.display = 'none'; 
 
@@ -859,36 +823,6 @@
             });
         }
 
-        // V6.0: 處理掃碼邏輯 (跟相機掃描共用邏輯) - Reception用
-        function handleScan(uid) {
-            if (allEvents[currentEventId] && allEvents[currentEventId].closed) {
-                Swal.fire("活動已結束", "無法報到", "warning");
-                return;
-            }
-            
-            if(guestsData[uid]) {
-                const g = guestsData[uid];
-                const isDuplicate = g.arrived;
-                
-                if(!isDuplicate) {
-                    checkIn(uid, true);
-                }
-                
-                showReceptionResult(g, isDuplicate);
-                
-                // 3秒後自動關閉結果視窗
-                setTimeout(() => { closeReceptionResult(); }, 3000);
-            } else {
-                Swal.fire({ 
-                    icon: 'error', 
-                    title: '查無此人', 
-                    text: '掃描內容: ' + uid,
-                    timer: 2000, 
-                    showConfirmButton: false 
-                });
-            }
-        }
-
         function deleteGuest(uid) {
             if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "資料已鎖定，無法刪除", "warning");
 
@@ -962,11 +896,11 @@
             Swal.fire({
                 title: '請選擇同步來源', text: "這將會覆蓋目前的初始名單", icon: 'question', showCancelButton: true, confirmButtonText: '僅會內會員 (Internal)', confirmButtonColor: '#0097D7', showDenyButton: true, denyButtonText: '全體名單 (All Data)', denyButtonColor: '#28a745', cancelButtonText: '取消'
             }).then((result) => {
-                if (result.isDismissed) return; 
-                const onlyInternal = result.isConfirmed; 
+                if (result.isDismissed) return; 
+                const onlyInternal = result.isConfirmed; 
                 Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
                 
-                const typeParam = onlyInternal ? 'internal' : 'all'; 
+                const typeParam = onlyInternal ? 'internal' : 'all'; 
                 
                 fetch(`${GOOGLE_SCRIPT_URL}?op=get_all&type=${typeParam}&_t=${new Date().getTime()}`).then(r => r.json()).then(data => {
                     if(data.status === 'error') return Swal.fire("錯誤", data.msg, "error");
