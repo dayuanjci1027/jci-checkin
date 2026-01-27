@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V5.5 (直連版)</title>
+    <title>JCI 報到系統 V4.9 (編輯功能版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -27,6 +27,7 @@
             height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;
         }
 
+        /* 系統鎖定遮罩 */
         #system-lock-screen {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 1); z-index: 9999;
@@ -38,27 +39,43 @@
         }
         .lock-icon { font-size: 4rem; color: var(--jci-dark); margin-bottom: 20px; }
 
+        /* 導航列 */
         #nav-bar { 
             background: rgba(255, 255, 255, 0.98); 
-            padding: 8px 15px; display: flex; justify-content: flex-start; align-items: center; 
+            padding: 8px 15px; 
+            display: flex; justify-content: flex-start; 
+            align-items: center; 
             box-shadow: 0 4px 20px rgba(0,0,0,0.05); z-index: 999; 
-            position: sticky; top: 0; height: auto; min-height: 60px; gap: 10px;
+            position: sticky; top: 0; 
+            height: auto; 
+            min-height: 60px; 
+            gap: 10px;
         }
         
+        /* 左側活動按鈕 */
         .event-badge { 
             background: #333; color: white; padding: 8px 15px; border-radius: 20px; 
             font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 5px; 
-            z-index: 1001; flex: 0 1 auto; width: fit-content; 
-            white-space: normal; word-break: break-word; line-height: 1.3; text-align: left; max-width: 50%; 
+            z-index: 1001; 
+            flex: 0 1 auto; 
+            width: fit-content; 
+            white-space: normal; 
+            word-break: break-word; 
+            line-height: 1.3;
+            text-align: left;
+            max-width: 50%; 
         }
         
+        /* 署名樣式 */
         .dev-signature {
             font-size: 0.8rem; color: #005780; font-weight: bold;
             background: #e1f5fe; padding: 4px 10px; border-radius: 20px;
             border: 1px solid #b3e5fc; white-space: nowrap;
             display: flex; align-items: center; gap: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            margin-left: auto; margin-right: 10px; flex-shrink: 0; 
+            margin-left: auto; 
+            margin-right: 10px;
+            flex-shrink: 0; 
         }
         
         .nav-group { display: flex; gap: 5px; }
@@ -77,11 +94,30 @@
             .nav-group { display: none; }
             .mobile-menu-btn { display: block; }
             .mobile-dropdown.show { display: flex; }
+            
             .nav-item { border-radius: 0; padding: 15px; text-align: center; border-bottom: 1px solid #f5f5f5; font-size: 1.1rem; }
             .nav-item:last-child { border-bottom: none; }
             .nav-item.active { background: #e3f2fd; color: var(--jci-blue); box-shadow: none; }
-            .event-badge { max-width: 60%; font-size: 0.85rem; padding: 6px 12px; }
-            .dev-signature { flex-direction: column; align-items: flex-end; justify-content: center; font-size: 0.65rem; line-height: 1.1; padding: 0; background: transparent; border: none; box-shadow: none; margin-left: auto; margin-right: 5px; }
+            
+            .event-badge { 
+                max-width: 60%; 
+                font-size: 0.85rem;
+                padding: 6px 12px;
+            }
+
+            .dev-signature { 
+                flex-direction: column; 
+                align-items: flex-end; 
+                justify-content: center;
+                font-size: 0.65rem; 
+                line-height: 1.1;
+                padding: 0;
+                background: transparent; 
+                border: none; 
+                box-shadow: none;
+                margin-left: auto; 
+                margin-right: 5px; 
+            }
             .dev-signature span { display: block; text-align: right; }
         }
 
@@ -93,7 +129,12 @@
         .btn-gradient { width: 100%; padding: 14px; background: var(--bg-gradient); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: 0.3s; margin-top: 5px; box-shadow: 0 5px 15px rgba(0,151,215,0.3); }
         .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,151,215,0.4); }
 
-        .event-card { background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; gap: 15px; }
+        .event-card { 
+            background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; 
+            gap: 15px; 
+        }
         .event-card.active { background: #e3f2fd; border-color: var(--jci-blue); }
         .event-card.closed { background: #fff5f5; border-color: #ffcdd2; }
         .event-info { flex: 1; min-width: 0; text-align: left; }
@@ -313,7 +354,6 @@
             if(snap.val()) {
                 systemSettings = snap.val();
                 checkSystemLock();
-                checkEventStatus();
             } else {
                 db.ref('settings').set({ locked: true, password: '1234', checkin_closed: false });
             }
@@ -366,32 +406,23 @@
                 isCurrentEventClosed = true;
             }
 
-            // 除錯：直接顯示目前抓到的 ID
-            let debugInfo = currentEventId 
-                ? `<span style="color:green;font-weight:bold;">${allEvents[currentEventId]?.name} (ID: ${currentEventId})</span>` 
-                : `<span style="color:red;font-weight:bold;">未選擇活動 (ID 為空)</span>`;
-
             Swal.fire({
                 title: '⚙️ 系統設定',
                 html: `
-                    <div style="background:#f0f2f5; padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.9rem;">
-                        <strong>目前鎖定活動：</strong><br>${debugInfo}
-                    </div>
-
                     <div style="text-align:left; margin-bottom:10px;">全站鎖定: ${systemSettings.locked ? '<span style="color:red;font-weight:bold;">🔒 鎖定</span>' : '<span style="color:green;font-weight:bold;">🔓 公開</span>'}</div>
                     <button id="toggle-lock-btn" class="btn-gradient" style="background:${systemSettings.locked?'#4caf50':'#f44336'}; margin-bottom:15px; padding:10px;">
                         ${systemSettings.locked ? '🔓 解除全站鎖定' : '🔒 啟用全站鎖定'}
                     </button>
                     
                     <hr>
-                    <button id="btn-show-qr" class="btn-gradient" style="background:#673ab7; margin-bottom:15px; padding:10px; ${!currentEventId ? 'opacity:0.5;cursor:not-allowed;' : ''}">
-                        📱 顯示本場活動簽到 QR Code
-                    </button>
-
                     <button id="btn-edit-meta" class="btn-gradient" style="background:#607d8b; margin-bottom:15px; padding:10px; ${!currentEventId ? 'display:none;' : ''}">
-                        ✏️ 修改活動資訊
+                        ✏️ 修改活動資訊 (名稱/日期/主席)
                     </button>
 
+                    <div style="text-align:left; margin-bottom:10px;">
+                        目前活動 (${allEvents[currentEventId] ? allEvents[currentEventId].name : '未選擇'}): 
+                        ${isCurrentEventClosed ? '<span style="color:red;font-weight:bold;">🛑 已結束</span>' : '<span style="color:green;font-weight:bold;">🟢 進行中</span>'}
+                    </div>
                     <button id="toggle-close-btn" class="btn-gradient" style="background:${isCurrentEventClosed?'#2196f3':'#d32f2f'}; margin-bottom:15px; padding:10px; ${!currentEventId ? 'display:none;' : ''}">
                         ${isCurrentEventClosed ? '🟢 重啟此活動 (允許報到)' : '🛑 結束此活動 (關閉報到)'}
                     </button>
@@ -418,42 +449,7 @@
                         Swal.fire('成功', newStatus ? '系統已上鎖' : '系統已公開', 'success');
                     };
                     
-                    // ★★★ V5.5 修正：使用直連網址 (自動偵測路徑) ★★★
-                    if(document.getElementById('btn-show-qr')) {
-                        document.getElementById('btn-show-qr').onclick = () => {
-                            if(!currentEventId) {
-                                Swal.showValidationMessage("錯誤：目前沒有選擇活動 ID");
-                                return;
-                            }
-                            
-                            // 自動抓取當前頁面的網址，並切換到 liff.html
-                            // 例如：https://.../jci-checkin/index.html -> https://.../jci-checkin/liff.html
-                            let baseUrl = window.location.href.split('?')[0]; 
-                            // 移除 index.html (如果有的話)
-                            baseUrl = baseUrl.replace('/index.html', '').replace('/reception', '').replace('/kiosk', '');
-                            // 確保結尾沒有斜線
-                            if(baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
-                            
-                            const targetUrl = `${baseUrl}/liff.html?eventId=${currentEventId}`;
-                            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(targetUrl)}`;
-                            
-                            Swal.fire({
-                                title: '活動專屬 QR Code',
-                                html: `
-                                    <div style="margin:20px 0;">
-                                        <img src="${qrApiUrl}" style="border:2px solid #eee; padding:10px; border-radius:10px;" alt="QR Code">
-                                    </div>
-                                    <p style="color:#333; font-weight:bold;">${allEvents[currentEventId].name}</p>
-                                    <p style="color:#666; font-size:0.9rem;">請會員使用 LINE 掃描此碼</p>
-                                    <p style="color:#999; font-size:0.8rem; margin-top:10px;">(V5.5 直連模式：穩定不掉參數)</p>
-                                    <a href="${targetUrl}" target="_blank" style="display:block; margin-top:15px; color:#0097D7; font-size:0.9rem;">直接開啟連結測試</a>
-                                `,
-                                showCloseButton: true,
-                                showConfirmButton: false
-                            });
-                        };
-                    }
-
+                    // V4.9: 實作修改活動資訊功能
                     if(document.getElementById('btn-edit-meta')) {
                         document.getElementById('btn-edit-meta').onclick = () => {
                             if(!currentEventId) return;
@@ -539,6 +535,7 @@
         }
 
         function createNewEvent() {
+            // V4.9: 移除舊版的全域鎖定檢查，現在您可以自由建立新活動
             Swal.fire({ 
                 title: '建立新活動', 
                 html: `
@@ -579,6 +576,7 @@
                 const isClosed = evt.closed ? true : false;
                 div.className = `event-card ${evt.id === currentEventId ? 'active' : ''} ${isClosed ? 'closed' : ''}`;
                 
+                // V4.9: 顯示優化
                 const displayDate = evt.eventDate ? evt.eventDate : "(未設定日期)";
                 const displayChair = evt.chairman ? evt.chairman : "(未設定)";
                 const createdStr = new Date(evt.created).toLocaleDateString();
