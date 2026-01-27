@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V4.9 (編輯功能版)</title>
+    <title>JCI 報到系統 V6.1 (雙模版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -27,6 +27,41 @@
             height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;
         }
 
+        /* 掃碼盒專用輸入區 (櫃台用) */
+        .scanner-box-container {
+            background: #fff; padding: 20px; border-radius: 15px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px;
+            text-align: center; border: 3px solid var(--jci-blue);
+        }
+        .scanner-status { font-weight: bold; color: var(--jci-dark); margin-bottom: 10px; }
+        #scanner-input {
+            width: 80%; padding: 15px; font-size: 1.2rem; text-align: center;
+            border: 2px solid #ddd; border-radius: 10px; background: #f9f9f9;
+            transition: all 0.3s;
+        }
+        #scanner-input:focus {
+            border-color: #00C853; background: #fff; box-shadow: 0 0 10px rgba(0,200,83,0.3);
+            outline: none;
+        }
+        .scanner-hint { font-size: 0.8rem; color: #888; margin-top: 8px; }
+
+        /* 自助報到待機畫面樣式 */
+        .kiosk-waiting-box {
+            background: white; padding: 40px 20px; border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1); text-align: center;
+            width: 90%; max-width: 500px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .pulse-ring {
+            width: 150px; height: 150px; border-radius: 50%;
+            background: #e3f2fd; display: flex; align-items: center; justify-content: center;
+            margin-bottom: 30px; animation: pulse-ring 2s infinite;
+        }
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(0, 151, 215, 0.4); } 70% { box-shadow: 0 0 0 30px rgba(0, 151, 215, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 151, 215, 0); } }
+        
+        .kiosk-instruction { font-size: 1.5rem; font-weight: bold; color: #333; margin-bottom: 10px; }
+        .kiosk-sub-instruction { font-size: 1.1rem; color: #666; margin-bottom: 30px; }
+
         /* 系統鎖定遮罩 */
         #system-lock-screen {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -42,40 +77,25 @@
         /* 導航列 */
         #nav-bar { 
             background: rgba(255, 255, 255, 0.98); 
-            padding: 8px 15px; 
-            display: flex; justify-content: flex-start; 
-            align-items: center; 
+            padding: 8px 15px; display: flex; justify-content: flex-start; align-items: center; 
             box-shadow: 0 4px 20px rgba(0,0,0,0.05); z-index: 999; 
-            position: sticky; top: 0; 
-            height: auto; 
-            min-height: 60px; 
-            gap: 10px;
+            position: sticky; top: 0; height: auto; min-height: 60px; gap: 10px;
         }
         
-        /* 左側活動按鈕 */
         .event-badge { 
             background: #333; color: white; padding: 8px 15px; border-radius: 20px; 
             font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 5px; 
-            z-index: 1001; 
-            flex: 0 1 auto; 
-            width: fit-content; 
-            white-space: normal; 
-            word-break: break-word; 
-            line-height: 1.3;
-            text-align: left;
-            max-width: 50%; 
+            z-index: 1001; flex: 0 1 auto; width: fit-content; 
+            white-space: normal; word-break: break-word; line-height: 1.3; text-align: left; max-width: 50%; 
         }
         
-        /* 署名樣式 */
         .dev-signature {
             font-size: 0.8rem; color: #005780; font-weight: bold;
             background: #e1f5fe; padding: 4px 10px; border-radius: 20px;
             border: 1px solid #b3e5fc; white-space: nowrap;
             display: flex; align-items: center; gap: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            margin-left: auto; 
-            margin-right: 10px;
-            flex-shrink: 0; 
+            margin-left: auto; margin-right: 10px; flex-shrink: 0; 
         }
         
         .nav-group { display: flex; gap: 5px; }
@@ -94,30 +114,11 @@
             .nav-group { display: none; }
             .mobile-menu-btn { display: block; }
             .mobile-dropdown.show { display: flex; }
-            
             .nav-item { border-radius: 0; padding: 15px; text-align: center; border-bottom: 1px solid #f5f5f5; font-size: 1.1rem; }
             .nav-item:last-child { border-bottom: none; }
             .nav-item.active { background: #e3f2fd; color: var(--jci-blue); box-shadow: none; }
-            
-            .event-badge { 
-                max-width: 60%; 
-                font-size: 0.85rem;
-                padding: 6px 12px;
-            }
-
-            .dev-signature { 
-                flex-direction: column; 
-                align-items: flex-end; 
-                justify-content: center;
-                font-size: 0.65rem; 
-                line-height: 1.1;
-                padding: 0;
-                background: transparent; 
-                border: none; 
-                box-shadow: none;
-                margin-left: auto; 
-                margin-right: 5px; 
-            }
+            .event-badge { max-width: 60%; font-size: 0.85rem; padding: 6px 12px; }
+            .dev-signature { flex-direction: column; align-items: flex-end; justify-content: center; font-size: 0.65rem; line-height: 1.1; padding: 0; background: transparent; border: none; box-shadow: none; margin-left: auto; margin-right: 5px; }
             .dev-signature span { display: block; text-align: right; }
         }
 
@@ -129,12 +130,7 @@
         .btn-gradient { width: 100%; padding: 14px; background: var(--bg-gradient); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: 0.3s; margin-top: 5px; box-shadow: 0 5px 15px rgba(0,151,215,0.3); }
         .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,151,215,0.4); }
 
-        .event-card { 
-            background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; 
-            display: flex; justify-content: space-between; align-items: center; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; 
-            gap: 15px; 
-        }
+        .event-card { background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; gap: 15px; }
         .event-card.active { background: #e3f2fd; border-color: var(--jci-blue); }
         .event-card.closed { background: #fff5f5; border-color: #ffcdd2; }
         .event-info { flex: 1; min-width: 0; text-align: left; }
@@ -155,17 +151,17 @@
         #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
 
-        #kiosk-start-btn { width: 260px; height: 260px; border-radius: 50%; font-size: 2.2rem; background: var(--bg-gradient); color: white; border: none; box-shadow: 0 15px 40px rgba(0,151,215,0.5); cursor: pointer; animation: pulse 2s infinite; font-weight: bold; letter-spacing: 2px; }
-        @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 15px 40px rgba(0,151,215,0.5); } 50% { transform: scale(1.05); box-shadow: 0 20px 50px rgba(0,151,215,0.7); } 100% { transform: scale(1); box-shadow: 0 15px 40px rgba(0,151,215,0.5); } }
-        #kiosk-scanner-container { display: none; width: 100%; max-width: 500px; background: black; border-radius: 25px; overflow: hidden; margin: 0 auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        #kiosk-camera-btn { 
+            width: 100%; padding: 15px; border-radius: 12px; font-size: 1.2rem; 
+            background: #fff; color: var(--jci-blue); border: 2px solid var(--jci-blue); 
+            font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; 
+        }
+        #kiosk-camera-btn:hover { background: var(--jci-blue); color: white; }
+
+        #kiosk-scanner-container { display: none; width: 100%; max-width: 500px; background: black; border-radius: 25px; overflow: hidden; margin: 20px auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
         #kiosk-success-view { display: none; text-align: center; }
         .countdown-bar { height: 6px; background: #eee; width: 100%; margin-top: 25px; border-radius: 10px; overflow: hidden; }
         .countdown-fill { height: 100%; background: #28a745; width: 100%; transition: width 3s linear; }
-
-        #swal-form-grid { display: grid; grid-template-columns: 1fr; gap: 15px; width: 100%; margin-top: 15px; }
-        .swal-wide-popup { width: 500px !important; max-width: 95% !important; }
-        .swal-large-input { width: 100%; padding: 15px !important; font-size: 1.2rem !important; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; background: #f9fcff; }
-        .swal-large-input:focus { border-color: var(--jci-blue); outline: none; }
 
         .settings-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
         .settings-action-btn { border: none; padding: 12px; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; font-size: 0.95rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; }
@@ -256,11 +252,19 @@
 
     <div id="page-kiosk" class="page">
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh;">
-            <div id="kiosk-standby" style="text-align: center;">
-                <img src="https://lh3.googleusercontent.com/d/1XbUrBBqLrGL3wceODZl790Bk1oGTp3do" alt="JCI Dayuan Logo" class="login-logo" style="width: 60%; margin-bottom: 40px; opacity: 0.9;">
-                <br>
-                <button id="kiosk-start-btn" onclick="startKiosk()">開始<br>自助報到</button>
-                <div style="margin-top:30px; color:#666; font-size:1.3rem; font-weight: bold;">請點擊按鈕開啟鏡頭</div>
+            
+            <div id="kiosk-standby" class="kiosk-waiting-box">
+                <div class="pulse-ring">
+                    <div style="font-size: 4rem;">📦</div>
+                </div>
+                <div class="kiosk-instruction">請將 QR Code 對準下方掃碼盒</div>
+                <div class="kiosk-sub-instruction">嗶一聲即完成報到</div>
+                
+                <hr style="width:100%; border:0; border-top:1px dashed #ddd; margin: 20px 0;">
+                
+                <button id="kiosk-camera-btn" onclick="startKioskCamera()">
+                    📷 沒有反應？點此開啟鏡頭掃描
+                </button>
             </div>
 
             <div id="kiosk-scanner-container">
@@ -283,6 +287,13 @@
 
     <div id="page-reception" class="page">
         <h2 style="margin-bottom:20px; text-align: center;">輸入端 (櫃台)</h2>
+        
+        <div class="scanner-box-container" onclick="document.getElementById('scanner-input').focus()">
+            <div class="scanner-status">📦 掃碼盒待命中...</div>
+            <input type="text" id="scanner-input" placeholder="點此啟用掃碼盒 (請保持此處有游標)" autocomplete="off" autofocus>
+            <div class="scanner-hint">請確認游標在輸入框內，然後直接掃描</div>
+        </div>
+
         <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px; font-size: 1.2rem;" onclick="toggleCamera()">📷 掃描 QR (後鏡頭)</button>
         
         <div style="background:white; padding:15px; border-radius:10px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; border:1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
@@ -349,6 +360,8 @@
         let isScanning = false;
         let isScanningProcessing = false;
         let systemSettings = { locked: false, password: '123', checkin_closed: false };
+        let kioskScanBuffer = "";
+        let kioskBufferTimeout = null;
 
         db.ref('settings').on('value', snap => {
             if(snap.val()) {
@@ -415,6 +428,7 @@
                     </button>
                     
                     <hr>
+                    
                     <button id="btn-edit-meta" class="btn-gradient" style="background:#607d8b; margin-bottom:15px; padding:10px; ${!currentEventId ? 'display:none;' : ''}">
                         ✏️ 修改活動資訊 (名稱/日期/主席)
                     </button>
@@ -449,7 +463,6 @@
                         Swal.fire('成功', newStatus ? '系統已上鎖' : '系統已公開', 'success');
                     };
                     
-                    // V4.9: 實作修改活動資訊功能
                     if(document.getElementById('btn-edit-meta')) {
                         document.getElementById('btn-edit-meta').onclick = () => {
                             if(!currentEventId) return;
@@ -529,13 +542,20 @@
             if(p !== 'reception') stopCamera(); 
             if(p !== 'kiosk') stopKiosk();
             
+            // V6.0: 只要切換到 Reception，自動 focus 掃碼框
+            if(p === 'reception') {
+                setTimeout(() => { 
+                    const input = document.getElementById('scanner-input');
+                    if(input) input.focus(); 
+                }, 500);
+            }
+            
             if(p === 'mc') renderMC();
 
             checkSystemLock();
         }
 
         function createNewEvent() {
-            // V4.9: 移除舊版的全域鎖定檢查，現在您可以自由建立新活動
             Swal.fire({ 
                 title: '建立新活動', 
                 html: `
@@ -576,7 +596,6 @@
                 const isClosed = evt.closed ? true : false;
                 div.className = `event-card ${evt.id === currentEventId ? 'active' : ''} ${isClosed ? 'closed' : ''}`;
                 
-                // V4.9: 顯示優化
                 const displayDate = evt.eventDate ? evt.eventDate : "(未設定日期)";
                 const displayChair = evt.chairman ? evt.chairman : "(未設定)";
                 const createdStr = new Date(evt.created).toLocaleDateString();
@@ -614,9 +633,9 @@
             goPage('reception');
         }
 
-        // --- KIOSK 相關邏輯 ---
+        // --- V6.1 KIOSK 雙模邏輯 ---
 
-        function startKiosk() {
+        function startKioskCamera() {
             if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "自助報到已關閉", "warning");
 
             document.getElementById('kiosk-standby').style.display = 'none';
@@ -633,16 +652,61 @@
         function stopKiosk() {
             if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
             document.getElementById('kiosk-scanner-container').style.display = 'none';
-            document.getElementById('kiosk-standby').style.display = 'block';
+            document.getElementById('kiosk-standby').style.display = 'flex'; // 回到待機畫面
             document.getElementById('kiosk-success-view').style.display = 'none';
             clearTimeout(kioskTimeout); 
         }
 
         function onKioskScanSuccess(uid) {
+            handleKioskInput(uid); // 共用處理邏輯
+        }
+
+        // V6.1: Kiosk 頁面的全域鍵盤監聽 (給掃碼盒用)
+        document.addEventListener('keypress', function (e) {
+            // 如果現在是在 Kiosk 頁面
+            if(document.getElementById('page-kiosk').classList.contains('active')) {
+                // 如果相機正在開著，就不監聽 (避免衝突)
+                if(document.getElementById('kiosk-scanner-container').style.display === 'block') return;
+
+                if(e.key === 'Enter') {
+                    if(kioskScanBuffer) {
+                        handleKioskInput(kioskScanBuffer);
+                        kioskScanBuffer = "";
+                    }
+                } else {
+                    kioskScanBuffer += e.key;
+                    // 設定超時清除 (防止亂碼堆積)
+                    clearTimeout(kioskBufferTimeout);
+                    kioskBufferTimeout = setTimeout(() => { kioskScanBuffer = ""; }, 500); // 500ms 內沒輸入完視為無效
+                }
+            }
+            
+            // 原本 Reception 頁面的監聽 (保持不變)
+            if(document.getElementById('page-reception').classList.contains('active')) {
+                const input = document.getElementById('scanner-input');
+                if(document.activeElement !== input && document.activeElement !== document.getElementById('search-box')) {
+                    input.focus();
+                }
+                if (e.key === 'Enter') {
+                    if(document.activeElement === document.getElementById('search-box')) return;
+                    const code = input.value.trim();
+                    if(code) {
+                        handleScan(code); // 這是 reception 用的
+                        input.value = '';
+                    }
+                }
+            }
+        });
+
+        // V6.1: Kiosk 統一處理邏輯 (盒掃 or 相機掃 都走這)
+        function handleKioskInput(uid) {
             clearTimeout(kioskTimeout); 
             if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
-            document.getElementById('kiosk-scanner-container').style.display = 'none';
             
+            // 確保相機關閉，顯示成功畫面
+            document.getElementById('kiosk-scanner-container').style.display = 'none';
+            document.getElementById('kiosk-standby').style.display = 'none'; 
+
             if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "報到無效", "error").then(() => stopKiosk());
 
             if(guestsData[uid]) {
@@ -674,8 +738,8 @@
                 setTimeout(() => { fill.style.transition = 'width 3s linear'; fill.style.width = '0%'; }, 100);
                 setTimeout(() => { stopKiosk(); }, 3000);
             } else { 
-                Swal.fire({ icon: 'error', title: '掃描失敗', text: '此 QR Code 不在名單中', timer: 2000, showConfirmButton: false })
-                .then(() => startKiosk()); 
+                Swal.fire({ icon: 'error', title: '掃描失敗', text: '此 QR Code 不在名單中: ' + uid, timer: 2000, showConfirmButton: false })
+                .then(() => stopKiosk()); 
             }
         }
 
@@ -768,49 +832,34 @@
             });
         }
 
-        function renderMC() {
-            const listP = document.getElementById('mc-list-presidents');
-            const listC = document.getElementById('mc-list-chairmen');
-            const emptyMsg = document.getElementById('mc-empty');
+        // V6.0: 處理掃碼邏輯 (跟相機掃描共用邏輯) - Reception用
+        function handleScan(uid) {
+            if (allEvents[currentEventId] && allEvents[currentEventId].closed) {
+                Swal.fire("活動已結束", "無法報到", "warning");
+                return;
+            }
             
-            listP.innerHTML = '';
-            listC.innerHTML = '';
-
-            let allArrived = Object.values(guestsData).filter(g => g.arrived);
-
-            if (allArrived.length === 0) { emptyMsg.style.display = 'block'; return; }
-            emptyMsg.style.display = 'none';
-
-            function parseWeight(title) {
-                if(!title) return 0;
-                if(title.indexOf("創會長") > -1) return 1; 
-                const termMatch = title.match(/(\d+)\s*屆/);
-                if(termMatch) return parseInt(termMatch[1]); 
-                const yearMatch = title.match(/20\d{2}/);
-                if(yearMatch) return parseInt(yearMatch[0]) - 1990; 
-                return 0; 
-            }
-            const sortFn = (a, b) => parseWeight(b.title) - parseWeight(a.title);
-
-            const presidents = allArrived.filter(g => (g.title||"").indexOf("會長") > -1 && (g.title||"").indexOf("屆") > -1).sort(sortFn);
-            const chairmen = allArrived.filter(g => (g.title||"").indexOf("主席") > -1 && (g.title||"").indexOf("屆") > -1).sort(sortFn);
-
-            function addItem(g, container) {
-                const d = document.createElement('div'); d.className = 'mc-item';
-                let timeStr = "--:--";
-                if(g.timestamp) {
-                    const date = new Date(g.timestamp);
-                    timeStr = `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+            if(guestsData[uid]) {
+                const g = guestsData[uid];
+                const isDuplicate = g.arrived;
+                
+                if(!isDuplicate) {
+                    checkIn(uid, true);
                 }
-                d.innerHTML = `<div class="mc-time">${timeStr}</div><div class="mc-name">${g.name}</div><div class="mc-title">${g.title}</div>`;
-                container.appendChild(d);
+                
+                showReceptionResult(g, isDuplicate);
+                
+                // 3秒後自動關閉結果視窗
+                setTimeout(() => { closeReceptionResult(); }, 3000);
+            } else {
+                Swal.fire({ 
+                    icon: 'error', 
+                    title: '查無此人', 
+                    text: '掃描內容: ' + uid,
+                    timer: 2000, 
+                    showConfirmButton: false 
+                });
             }
-
-            if(presidents.length > 0) presidents.forEach(g => addItem(g, listP));
-            else listP.innerHTML = '<div style="padding:15px;text-align:center;color:#999;">(無)</div>';
-
-            if(chairmen.length > 0) chairmen.forEach(g => addItem(g, listC));
-            else listC.innerHTML = '<div style="padding:15px;text-align:center;color:#999;">(無)</div>';
         }
 
         function deleteGuest(uid) {
@@ -886,11 +935,11 @@
             Swal.fire({
                 title: '請選擇同步來源', text: "這將會覆蓋目前的初始名單", icon: 'question', showCancelButton: true, confirmButtonText: '僅會內會員 (Internal)', confirmButtonColor: '#0097D7', showDenyButton: true, denyButtonText: '全體名單 (All Data)', denyButtonColor: '#28a745', cancelButtonText: '取消'
             }).then((result) => {
-                if (result.isDismissed) return; 
-                const onlyInternal = result.isConfirmed; 
+                if (result.isDismissed) return; 
+                const onlyInternal = result.isConfirmed; 
                 Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
                 
-                const typeParam = onlyInternal ? 'internal' : 'all'; 
+                const typeParam = onlyInternal ? 'internal' : 'all'; 
                 
                 fetch(`${GOOGLE_SCRIPT_URL}?op=get_all&type=${typeParam}&_t=${new Date().getTime()}`).then(r => r.json()).then(data => {
                     if(data.status === 'error') return Swal.fire("錯誤", data.msg, "error");
