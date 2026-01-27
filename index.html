@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V6.1 (雙模版)</title>
+    <title>JCI 報到系統 V6.2 (防呆優化版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -27,7 +27,7 @@
             height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;
         }
 
-        /* 掃碼盒專用輸入區 (櫃台用) */
+        /* 掃碼盒專用輸入區 */
         .scanner-box-container {
             background: #fff; padding: 20px; border-radius: 15px; 
             box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px;
@@ -38,12 +38,13 @@
             width: 80%; padding: 15px; font-size: 1.2rem; text-align: center;
             border: 2px solid #ddd; border-radius: 10px; background: #f9f9f9;
             transition: all 0.3s;
+            ime-mode: disabled; /* 嘗試禁用輸入法 */
         }
         #scanner-input:focus {
             border-color: #00C853; background: #fff; box-shadow: 0 0 10px rgba(0,200,83,0.3);
             outline: none;
         }
-        .scanner-hint { font-size: 0.8rem; color: #888; margin-top: 8px; }
+        .scanner-hint { font-size: 0.8rem; color: #d32f2f; margin-top: 8px; font-weight: bold; }
 
         /* 自助報到待機畫面樣式 */
         .kiosk-waiting-box {
@@ -290,8 +291,10 @@
         
         <div class="scanner-box-container" onclick="document.getElementById('scanner-input').focus()">
             <div class="scanner-status">📦 掃碼盒待命中...</div>
-            <input type="text" id="scanner-input" placeholder="點此啟用掃碼盒 (請保持此處有游標)" autocomplete="off" autofocus>
-            <div class="scanner-hint">請確認游標在輸入框內，然後直接掃描</div>
+            <input type="url" id="scanner-input" inputmode="latin" 
+                   placeholder="點此啟用掃碼 (請切換至英文輸入法!!)" 
+                   autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" autofocus>
+            <div class="scanner-hint">⚠️ 如果出現注音亂碼，請切換 iPad 輸入法為 English (US)</div>
         </div>
 
         <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px; font-size: 1.2rem;" onclick="toggleCamera()">📷 掃描 QR (後鏡頭)</button>
@@ -556,6 +559,7 @@
         }
 
         function createNewEvent() {
+            // V4.9: 移除舊版的全域鎖定檢查，現在您可以自由建立新活動
             Swal.fire({ 
                 title: '建立新活動', 
                 html: `
@@ -596,6 +600,7 @@
                 const isClosed = evt.closed ? true : false;
                 div.className = `event-card ${evt.id === currentEventId ? 'active' : ''} ${isClosed ? 'closed' : ''}`;
                 
+                // V4.9: 顯示優化
                 const displayDate = evt.eventDate ? evt.eventDate : "(未設定日期)";
                 const displayChair = evt.chairman ? evt.chairman : "(未設定)";
                 const createdStr = new Date(evt.created).toLocaleDateString();
@@ -691,6 +696,17 @@
                     if(document.activeElement === document.getElementById('search-box')) return;
                     const code = input.value.trim();
                     if(code) {
+                        // V6.2: 檢查是否包含中文（注音輸入錯誤）
+                        if (/[\u3105-\u3129\u02CA\u02C7\u02CB\u02D9]/.test(code)) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: '輸入錯誤',
+                                text: '偵測到注音符號！請將 iPad 輸入法切換為「English (US)」',
+                                timer: 3000
+                            });
+                            input.value = '';
+                            return;
+                        }
                         handleScan(code); // 這是 reception 用的
                         input.value = '';
                     }
@@ -703,6 +719,17 @@
             clearTimeout(kioskTimeout); 
             if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
             
+            // V6.2: 檢查是否包含中文（注音輸入錯誤）
+            if (/[\u3105-\u3129\u02CA\u02C7\u02CB\u02D9]/.test(uid)) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: '輸入錯誤',
+                    text: '偵測到注音符號！請將 iPad 輸入法切換為「English (US)」',
+                    timer: 3000
+                });
+                return;
+            }
+
             // 確保相機關閉，顯示成功畫面
             document.getElementById('kiosk-scanner-container').style.display = 'none';
             document.getElementById('kiosk-standby').style.display = 'none'; 
