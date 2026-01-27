@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V6.5 (旗艦版)</title>
+    <title>JCI 報到系統 V6.6 (贖罪版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -88,6 +88,8 @@
         }
 
         .page { display: none; flex: 1; overflow-y: auto; padding: 20px; animation: fadeIn 0.4s ease-out; }
+        /* V6.6 修正：Kiosk 頁面移除 padding 以便 Banner 滿版 */
+        #page-kiosk.page { padding: 0; }
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -117,11 +119,20 @@
         #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
 
         /* KIOSK 樣式 */
-        .kiosk-header {
-            font-size: 3rem; color: var(--jci-dark); font-weight: bold;
-            margin-bottom: 30px; letter-spacing: 5px; text-align: center;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        
+        /* V6.6: 全新 BANNER 樣式 */
+        .kiosk-main-banner {
+            width: 100%;
+            background: linear-gradient(135deg, #0097D7 0%, #005780 100%);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            border-radius: 0 0 40px 40px; /* 下方圓角 */
         }
+        .banner-title { font-size: 3rem; font-weight: bold; letter-spacing: 5px; margin-bottom: 5px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .banner-sub { font-size: 1.2rem; opacity: 0.9; letter-spacing: 2px; }
 
         .kiosk-waiting-box {
             background: white; padding: 40px 20px; border-radius: 30px;
@@ -131,6 +142,16 @@
             border: 4px solid var(--jci-blue);
         }
         
+        /* 掃碼圖示 SVG 樣式 */
+        .pulse-ring {
+            width: 160px; height: 160px; border-radius: 50%;
+            background: #e3f2fd; display: flex; align-items: center; justify-content: center;
+            margin-bottom: 30px; animation: pulse-ring 2s infinite;
+        }
+        .scan-svg-icon { width: 80px; height: 80px; fill: var(--jci-blue); }
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(0, 151, 215, 0.4); } 70% { box-shadow: 0 0 0 30px rgba(0, 151, 215, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 151, 215, 0); } }
+
+        /* 掃碼盒輸入框 (Kiosk用) */
         #kiosk-input {
             width: 90%; padding: 15px; font-size: 1.3rem; text-align: center;
             border: 2px solid #ddd; border-radius: 12px; background: #f9f9f9;
@@ -163,21 +184,6 @@
             display: flex; align-items: center; gap: 5px;
         }
         .bt-pair-btn:hover { background: #546e7a; transform: translateY(-2px); }
-
-        /* 掃碼盒專用輸入區 (櫃台用) */
-        .scanner-box-container {
-            background: #fff; padding: 20px; border-radius: 15px; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px;
-            text-align: center; border: 3px solid var(--jci-blue);
-        }
-        .scanner-status { font-weight: bold; color: var(--jci-dark); margin-bottom: 10px; font-size: 1.1rem; }
-        #scanner-input {
-            width: 80%; padding: 15px; font-size: 1.2rem; text-align: center;
-            border: 2px solid #ddd; border-radius: 10px; background: #f9f9f9;
-            transition: all 0.3s; ime-mode: disabled; 
-        }
-        #scanner-input:focus { border-color: #00C853; background: #fff; box-shadow: 0 0 10px rgba(0,200,83,0.3); outline: none; }
-        .scanner-hint { font-size: 0.8rem; color: #d32f2f; margin-top: 8px; font-weight: bold; }
 
         .settings-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
         .settings-action-btn { border: none; padding: 12px; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; font-size: 0.95rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; }
@@ -271,12 +277,20 @@
             <span>📶</span> 掃碼盒藍牙連線
         </div>
 
-        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh;">
+        <div style="display:flex; flex-direction:column; align-items:center; min-height:80vh;">
             
-            <div class="kiosk-header">自助報到</div>
+            <div class="kiosk-main-banner">
+                <div class="banner-title">JCI 自助報到</div>
+                <div class="banner-sub">歡迎蒞臨．請出示 QR Code</div>
+            </div>
 
             <div id="kiosk-standby" class="kiosk-waiting-box" onclick="document.getElementById('kiosk-input').focus()">
-                <div class="kiosk-instruction" style="color:var(--jci-blue); margin-bottom:15px;">📡 掃碼盒待命中</div>
+                <div class="pulse-ring">
+                    <svg class="scan-svg-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 5v4h2V5h4V3H5c-1.1 0-2 .9-2 2zm2 10H3v4c0 1.1.9 2 2 2h4v-2H5v-4zm14 4h-4v2h4c1.1 0 2-.9 2-2v-4h-2v4zm0-16h-4v2h4v4h2V5c0-1.1-.9-2-2-2zm-6 8h-2v4h2v-4zm4 0h-2v4h2v-4zm-8 0H7v4h2v-4z"/>
+                    </svg>
+                </div>
+                <div class="kiosk-instruction">📡 掃碼盒待命中</div>
                 
                 <input type="url" id="kiosk-input" inputmode="latin" 
                        placeholder="點此啟用 (請切換英文輸入)" 
@@ -312,14 +326,6 @@
     <div id="page-reception" class="page">
         <h2 style="margin-bottom:20px; text-align: center;">輸入端 (櫃台)</h2>
         
-        <div class="scanner-box-container" onclick="document.getElementById('scanner-input').focus()">
-            <div class="scanner-status">📡 掃碼盒待命中...</div>
-            <input type="url" id="scanner-input" inputmode="latin" 
-                   placeholder="點此啟用掃碼 (請切換至英文輸入法!!)" 
-                   autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" autofocus>
-            <div class="scanner-hint">⚠️ 如果出現注音亂碼，請切換 iPad 輸入法為 English (US)</div>
-        </div>
-
         <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px; font-size: 1.2rem;" onclick="toggleCamera()">📷 掃描 QR (後鏡頭)</button>
         
         <div style="background:white; padding:15px; border-radius:10px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; border:1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
@@ -568,7 +574,7 @@
             if(p !== 'reception') stopCamera(); 
             if(p !== 'kiosk') stopKiosk();
             
-            // V6.4: 只要切換到 Kiosk，自動 focus 掃碼框
+            // V6.6: Kiosk 頁面自動 focus
             if(p === 'kiosk') {
                 setTimeout(() => { 
                     const input = document.getElementById('kiosk-input');
@@ -582,7 +588,6 @@
         }
 
         function createNewEvent() {
-            // V4.9: 移除舊版的全域鎖定檢查，現在您可以自由建立新活動
             Swal.fire({ 
                 title: '建立新活動', 
                 html: `
@@ -623,7 +628,6 @@
                 const isClosed = evt.closed ? true : false;
                 div.className = `event-card ${evt.id === currentEventId ? 'active' : ''} ${isClosed ? 'closed' : ''}`;
                 
-                // V4.9: 顯示優化
                 const displayDate = evt.eventDate ? evt.eventDate : "(未設定日期)";
                 const displayChair = evt.chairman ? evt.chairman : "(未設定)";
                 const createdStr = new Date(evt.created).toLocaleDateString();
@@ -735,8 +739,6 @@
                     }
                 }
             }
-            
-            // Reception 頁面不需要了，因為您說要用 Kiosk 做
         });
 
         // V6.4: Kiosk 統一處理邏輯
