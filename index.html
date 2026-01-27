@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JCI 報到系統 V6.4 (Kiosk雙模修正版)</title>
+    <title>JCI 報到系統 V6.5 (旗艦版)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -116,16 +116,21 @@
         #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
 
-        /* KIOSK 雙模樣式 */
+        /* KIOSK 樣式 */
+        .kiosk-header {
+            font-size: 3rem; color: var(--jci-dark); font-weight: bold;
+            margin-bottom: 30px; letter-spacing: 5px; text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
         .kiosk-waiting-box {
             background: white; padding: 40px 20px; border-radius: 30px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.1); text-align: center;
             width: 90%; max-width: 500px;
             display: flex; flex-direction: column; align-items: center;
-            border: 4px solid var(--jci-blue); /* 強調這是輸入區 */
+            border: 4px solid var(--jci-blue);
         }
         
-        /* 掃碼盒輸入框 (Kiosk用) */
         #kiosk-input {
             width: 90%; padding: 15px; font-size: 1.3rem; text-align: center;
             border: 2px solid #ddd; border-radius: 12px; background: #f9f9f9;
@@ -147,6 +152,32 @@
         #kiosk-success-view { display: none; text-align: center; }
         .countdown-bar { height: 6px; background: #eee; width: 100%; margin-top: 25px; border-radius: 10px; overflow: hidden; }
         .countdown-fill { height: 100%; background: #28a745; width: 100%; transition: width 3s linear; }
+
+        /* 掃碼盒藍牙配對按鈕 (右下角) */
+        .bt-pair-btn {
+            position: fixed; bottom: 20px; right: 20px;
+            background: #607d8b; color: white;
+            padding: 10px 20px; border-radius: 30px;
+            font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: pointer; z-index: 1000; font-size: 0.9rem;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .bt-pair-btn:hover { background: #546e7a; transform: translateY(-2px); }
+
+        /* 掃碼盒專用輸入區 (櫃台用) */
+        .scanner-box-container {
+            background: #fff; padding: 20px; border-radius: 15px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px;
+            text-align: center; border: 3px solid var(--jci-blue);
+        }
+        .scanner-status { font-weight: bold; color: var(--jci-dark); margin-bottom: 10px; font-size: 1.1rem; }
+        #scanner-input {
+            width: 80%; padding: 15px; font-size: 1.2rem; text-align: center;
+            border: 2px solid #ddd; border-radius: 10px; background: #f9f9f9;
+            transition: all 0.3s; ime-mode: disabled; 
+        }
+        #scanner-input:focus { border-color: #00C853; background: #fff; box-shadow: 0 0 10px rgba(0,200,83,0.3); outline: none; }
+        .scanner-hint { font-size: 0.8rem; color: #d32f2f; margin-top: 8px; font-weight: bold; }
 
         .settings-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
         .settings-action-btn { border: none; padding: 12px; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; font-size: 0.95rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; }
@@ -236,8 +267,14 @@
     </div>
 
     <div id="page-kiosk" class="page">
+        <div class="bt-pair-btn" onclick="showPairingQR()">
+            <span>📶</span> 掃碼盒藍牙連線
+        </div>
+
         <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh;">
             
+            <div class="kiosk-header">自助報到</div>
+
             <div id="kiosk-standby" class="kiosk-waiting-box" onclick="document.getElementById('kiosk-input').focus()">
                 <div class="kiosk-instruction" style="color:var(--jci-blue); margin-bottom:15px;">📡 掃碼盒待命中</div>
                 
@@ -250,7 +287,7 @@
                 <div style="margin: 20px 0; color:#999;">- 或 -</div>
                 
                 <button id="kiosk-camera-btn" onclick="startKioskCamera()">
-                    📷 沒帶卡？點此開啟鏡頭掃描
+                    📷 點開鏡頭掃描
                 </button>
             </div>
 
@@ -274,6 +311,15 @@
 
     <div id="page-reception" class="page">
         <h2 style="margin-bottom:20px; text-align: center;">輸入端 (櫃台)</h2>
+        
+        <div class="scanner-box-container" onclick="document.getElementById('scanner-input').focus()">
+            <div class="scanner-status">📡 掃碼盒待命中...</div>
+            <input type="url" id="scanner-input" inputmode="latin" 
+                   placeholder="點此啟用掃碼 (請切換至英文輸入法!!)" 
+                   autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" autofocus>
+            <div class="scanner-hint">⚠️ 如果出現注音亂碼，請切換 iPad 輸入法為 English (US)</div>
+        </div>
+
         <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px; font-size: 1.2rem;" onclick="toggleCamera()">📷 掃描 QR (後鏡頭)</button>
         
         <div style="background:white; padding:15px; border-radius:10px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; border:1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
@@ -340,6 +386,8 @@
         let isScanning = false;
         let isScanningProcessing = false;
         let systemSettings = { locked: false, password: '123', checkin_closed: false };
+        let kioskScanBuffer = "";
+        let kioskBufferTimeout = null;
 
         db.ref('settings').on('value', snap => {
             if(snap.val()) {
@@ -610,10 +658,22 @@
                 renderMC(); 
             });
             checkEventStatus();
-            goPage('reception'); // 進入後預設先去櫃台，但您可以自己切到 Kiosk
+            goPage('reception');
         }
 
-        // --- V6.4 KIOSK 雙模邏輯 ---
+        // --- V6.5 KIOSK 雙模邏輯 ---
+
+        // V6.5: 顯示配對 QR Code
+        function showPairingQR() {
+            Swal.fire({
+                title: '請拿給掃碼盒掃碼並連線藍牙',
+                imageUrl: 'pair.jpg', // ★★★ 關鍵：請務必上傳這張圖片 ★★★
+                imageWidth: 200,
+                imageAlt: 'Bluetooth Pairing Code',
+                confirmButtonText: '關閉',
+                footer: '<span style="color:#666; font-size:0.8rem;">(若圖片未顯示，請確認是否已上傳 pair.jpg)</span>'
+            });
+        }
 
         function startKioskCamera() {
             if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "自助報到已關閉", "warning");
