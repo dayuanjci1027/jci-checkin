@@ -955,10 +955,14 @@
             grid.innerHTML = '';
             let list = Object.values(guestsData).filter(g => {
                 if (!g.arrived) return false;
-                if (g.group === 'External' || g.group === 'Official' || g.group === 'Officials') return true;
-                if ((g.group === 'Internal' || g.group === 'internal') && g.title) {
-                      if (g.title.indexOf('會長') > -1 || g.title.indexOf('主席') > -1) return true;
+                
+                // 蝦霸修正：根據老大要求，只顯示職稱為「總會長」或「會長」的貴賓
+                // 過濾掉「副會長」、「前會長」等包含其他字眼的職稱
+                const title = g.title || "";
+                if (title === "會長" || title === "總會長") {
+                    return true;
                 }
+                
                 return false;
             });
             if (list.length === 0) { emptyMsg.style.display = 'block'; return; } else { emptyMsg.style.display = 'none'; }
