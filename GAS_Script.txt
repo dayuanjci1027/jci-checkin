@@ -1,0 +1,86 @@
+/**
+ * JCI 大園青商 - 外會來賓簽到系統後端腳本
+ * 功能：
+ * 1. 接收來賓報名資料
+ * 2. 將照片存入指定 Google Drive 資料夾
+ * 3. 寄送精緻 HTML 郵件 (含 QR Code)
+ * 4. 提供刪除照片 API (會議結束時呼叫)
+ */
+
+const CONFIG = {
+  FOLDER_ID: "請在這裡填入GoogleDrive資料夾ID", // 存放照片的資料夾
+  FIREBASE_DB_URL: "https://checkin2025-f0bb9-default-rtdb.asia-southeast1.firebasedatabase.app"
+};
+
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents);
+  const action = data.action;
+
+  if (action === 'register') {
+    return handleRegistration(data);
+  } else if (action === 'cleanup') {
+    return handleCleanup(data);
+  }
+}
+
+function handleRegistration(data) {
+  try {
+    const folder = DriveApp.getFolderById(CONFIG.FOLDER_ID);
+    const blob = Utilities.newBlob(Utilities.base64Decode(data.photoData), data.photoType, `${data.eventId}_${data.name}.jpg`);
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    const photoUrl = `https://lh3.googleusercontent.com/d/${file.getId()}`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${data.name}_${data.eventId}`; // 簡化版 ID
+
+    // 發送郵件
+    const htmlBody = `
+      <div style="font-family: 'Microsoft JhengHei', sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 10px; overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #0097D7 0%, #005780 100%); padding: 20px; text-align: center; color: white;">
+          <h1 style="margin: 0;">大園青年商會</h1>
+          <p style="margin: 5px 0 0;">歡迎您的蒞臨</p>
+        </div>
+        <div style="padding: 30px; text-align: center;">
+          <p style="font-size: 1.2rem; color: #333;">親愛的 <b>${data.chapter} ${data.name} ${data.title}</b> 您好：</p>
+          <p style="color: #666;">感謝您的預約，這是您專屬的報到 QR Code。</p>
+          <img src="${qrCodeUrl}" style="width: 200px; height: 200px; margin: 20px auto; border: 5px solid #f0f2f5;">
+          <p style="color: #666; font-size: 0.9rem;">請於報到處出示此碼完成報到</p>
+          <div style="margin-top: 30px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+            <p style="margin: 5px 0; font-size: 0.9rem;">會議 ID: ${data.eventId}</p>
+          </div>
+        </div>
+        <div style="background: #f4f4f4; padding: 15px; text-align: center; font-size: 0.8rem; color: #999;">
+          © JCI DAYUAN 2026 | 蝦霸自動化系統
+        </div>
+      </div>
+    `;
+
+    MailApp.sendEmail({
+      to: data.email,
+      subject: `【大園青商】預約成功通知 - ${data.name} 先生/小姐`,
+      htmlBody: htmlBody
+    });
+
+    return ContentService.createTextOutput(JSON.stringify({ status: 'success', fileId: file.getId() })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function handleCleanup(data) {
+  const folder = DriveApp.getFolderById(CONFIG.FOLDER_ID);
+  const files = folder.getFiles();
+  let count = 0;
+  
+  while (files.hasNext()) {
+    const file = files.next();
+    // 檢查檔名是否包含該次會議 ID
+    if (file.getName().indexOf(data.eventId) > -1) {
+      file.setTrashed(true);
+      count++;
+    }
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({ status: 'success', deleted: count })).setMimeType(ContentService.MimeType.JSON);
+}

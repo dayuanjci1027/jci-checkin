@@ -532,32 +532,9 @@
                         document.getElementById('toggle-close-btn').onclick = () => {
                             if (!currentEventId) return;
                             const newStatus = !isCurrentEventClosed;
-                            
-                            // 蝦霸新增：如果活動關閉，連動刪除 Google Drive 上的照片
-                            if(newStatus === true) {
-                                Swal.fire({
-                                    title: '確定結束活動？',
-                                    text: "結束後將自動刪除所有來賓上傳的照片以保護隱私！",
-                                    icon: 'warning',
-                                    showCancelButton: true,
-                                    confirmButtonText: '確定結束',
-                                    cancelButtonText: '取消'
-                                }).then((result) => {
-                                    if (result.isConfirmed) {
-                                        db.ref(`events_meta/${currentEventId}`).update({ closed: true });
-                                        // 呼叫 GAS Cleanup API
-                                        fetch(GOOGLE_SCRIPT_URL, {
-                                            method: 'POST',
-                                            mode: 'no-cors',
-                                            body: JSON.stringify({ action: 'cleanup', eventId: currentEventId })
-                                        });
-                                        Swal.fire('活動已結束', '來賓照片已同步從雲端刪除', 'success');
-                                    }
-                                });
-                            } else {
-                                db.ref(`events_meta/${currentEventId}`).update({ closed: false });
-                                Swal.fire('活動已重啟', '', 'success');
-                            }
+                            db.ref(`events_meta/${currentEventId}`).update({ closed: newStatus });
+                            Swal.close();
+                            Swal.fire('設定更新', newStatus ? '此活動已結束，報到功能已鎖定' : '此活動已重啟，報到功能恢復', newStatus ? 'warning' : 'success');
                         };
                     }
 

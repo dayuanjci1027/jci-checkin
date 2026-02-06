@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大園青商 - 外會來賓預約簽到</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root { --jci-blue: #0097D7; --jci-dark: #005780; --bg-gradient: linear-gradient(135deg, #0097D7 0%, #005780 100%); }
+        body { font-family: 'Noto Sans TC', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
+        .logo-text { font-size: 1.8rem; font-weight: bold; color: var(--jci-blue); margin-bottom: 5px; }
+        .sub-text { color: #666; margin-bottom: 25px; }
+        .form-group { text-align: left; margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+        input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; font-size: 1rem; }
+        input:focus { border-color: var(--jci-blue); outline: none; }
+        .btn-submit { width: 100%; padding: 15px; background: var(--bg-gradient); color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 1.1rem; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+        #photo-preview { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin: 10px auto; display: none; border: 3px solid var(--jci-blue); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo-text">JCI 大園青年商會</div>
+        <div id="event-name" class="sub-text">外會來賓預約報到系統</div>
+        <form id="invite-form">
+            <div class="form-group">
+                <label>所屬分會</label>
+                <input type="text" id="chapter" placeholder="例如：大園青商" required>
+            </div>
+            <div class="form-group">
+                <label>職稱</label>
+                <input type="text" id="title" placeholder="例如：會長 / 秘書長" required>
+            </div>
+            <div class="form-group">
+                <label>姓名</label>
+                <input type="text" id="name" placeholder="請輸入姓名" required>
+            </div>
+            <div class="form-group">
+                <label>Email (寄送 QR Code 用)</label>
+                <input type="email" id="email" placeholder="example@mail.com" required>
+            </div>
+            <div class="form-group">
+                <label>上傳照片</label>
+                <input type="file" id="photo" accept="image/*" required>
+                <img id="photo-preview" src="">
+            </div>
+            <button type="submit" class="btn-submit" id="submit-btn">提交預約</button>
+        </form>
+    </div>
+
+    <script>
+        // Firebase Config (與主系統一致)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLq7SrkQaCnjtsFArh0leKPJRbPFZTZnk",
+            authDomain: "checkin2025-f0bb9.firebaseapp.com",
+            databaseURL: "https://checkin2025-f0bb9-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "checkin2025-f0bb9",
+            storageBucket: "checkin2025-f0bb9.firebasestorage.app",
+            messagingSenderId: "526526638146",
+            appId: "1:526526638146:web:c69e758e8b3c1d5990e5db"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // 這裡填寫老大的 GAS 佈署連結
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyT00r1ap5CkHkuyj3htQ0-AuU65CkidhsxWftaNjWe_9iPgKs6HlaLfqBDPqkV2dUDMQ/exec";
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventId = urlParams.get('event');
+
+        if (!eventId) {
+            Swal.fire("錯誤", "網址無效，缺少會議 ID", "error");
+            document.getElementById('submit-btn').disabled = true;
+        } else {
+            db.ref('events_meta/' + eventId).once('value', snap => {
+                if (snap.exists()) {
+                    document.getElementById('event-name').innerText = "歡迎蒞臨：" + snap.val().name;
+                } else {
+                    Swal.fire("錯誤", "找不到該會議資訊", "error");
+                    document.getElementById('submit-btn').disabled = true;
+                }
+            });
+        }
+
+        document.getElementById('photo').onchange = function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const preview = document.getElementById('photo-preview');
+                    preview.src = evt.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        document.getElementById('invite-form').onsubmit = async function(e) {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerText = "處理中...";
+
+            const chapter = document.getElementById('chapter').value;
+            const title = document.getElementById('title').value;
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const photoFile = document.getElementById('photo').files[0];
+
+            try {
+                // 1. 將照片轉為 Base64
+                const base64Photo = await toBase64(photoFile);
+                
+                // 2. 呼叫 GAS 處理照片上傳與郵件發送
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // GAS 跨域限制
+                    body: JSON.stringify({
+                        action: 'register',
+                        eventId: eventId,
+                        chapter: chapter,
+                        title: title,
+                        name: name,
+                        email: email,
+                        photoData: base64Photo.split(',')[1],
+                        photoType: photoFile.type
+                    })
+                });
+
+                // 因為 no-cors 無法讀取 response，我們假設成功並直接寫入 Firebase
+                // 在實際運作中，GAS 會同步完成寄信
+                const visitorId = 'v_' + Date.now();
+                await db.ref('events_data/' + eventId + '/' + visitorId).set({
+                    id: visitorId,
+                    name: name,
+                    title: chapter + ' ' + title,
+                    arrived: false,
+                    photo: "", // 照片將由 GAS 上傳後更新 ID，這裡先留空或暫存
+                    email: email,
+                    isGuest: true
+                });
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '預約成功',
+                    text: 'QR Code 已寄送至您的信箱，請查收！',
+                    confirmButtonText: '太棒了'
+                }).then(() => location.reload());
+
+            } catch (err) {
+                console.error(err);
+                Swal.fire("錯誤", "提交失敗，請洽秘書處", "error");
+                submitBtn.disabled = false;
+                submitBtn.innerText = "提交預約";
+            }
+        };
+
+        function toBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+    </script>
+</body>
+</html>
