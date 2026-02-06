@@ -465,6 +465,10 @@
                         ✏️ 修改活動資訊 (名稱/日期/主席)
                     </button>
 
+                    <button id="btn-copy-invite" class="btn-gradient" style="background:var(--jci-blue); margin-bottom:15px; padding:10px; ${!currentEventId ? 'display:none;' : ''}">
+                        🔗 複製外會來賓預約連結
+                    </button>
+
                     <div style="text-align:left; margin-bottom:10px;">
                         目前活動 (${allEvents[currentEventId] ? allEvents[currentEventId].name : '未選擇'}): 
                         ${isCurrentEventClosed ? '<span style="color:red;font-weight:bold;">🛑 已結束</span>' : '<span style="color:green;font-weight:bold;">🟢 進行中</span>'}
@@ -524,6 +528,29 @@
                                     });
                                     Swal.fire('成功', '活動資訊已更新', 'success');
                                 }
+                            });
+                        };
+                    }
+
+                    if(document.getElementById('btn-copy-invite')) {
+                        document.getElementById('btn-copy-invite').onclick = () => {
+                            if(!currentEventId) return;
+                            const baseUrl = window.location.href.split('index.html')[0];
+                            const inviteUrl = `${baseUrl}invite.html?event=${currentEventId}`;
+                            
+                            // 複製到剪貼簿
+                            const el = document.createElement('textarea');
+                            el.value = inviteUrl;
+                            document.body.appendChild(el);
+                            el.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(el);
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: '連結已複製',
+                                text: inviteUrl,
+                                footer: '<span style="color:var(--jci-blue)">快傳給外會來賓預約吧！</span>'
                             });
                         };
                     }
