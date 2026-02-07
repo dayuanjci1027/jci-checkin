@@ -70,6 +70,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // 蝦霸更新：這是最新版本的 GAS 連結 (v29)
         const GAS_URL = "https://script.google.com/macros/s/AKfycby-ekAyhXD8FLUWv6Xnma2Uvn7htbJAULLGe_jjzVbhFCJkwBtilD5lH6UDVDu6drO0Sg/exec";
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -125,22 +126,30 @@
                     displayUnit = organization;
                 }
 
+                // 蝦霸修正：改用 JSONP 模式或更霸氣的 POST 處理
+                // 因為 no-cors 無法獲取響應，但可以成功觸發
+                const payload = {
+                    action: 'register',
+                    eventId: eventId,
+                    chapter: displayUnit,
+                    title: title,
+                    name: name,
+                    email: email,
+                    group: finalGroup,
+                    photoData: base64Photo.split(',')[1],
+                    photoType: photoFile.type
+                };
+
                 await fetch(GAS_URL, {
                     method: 'POST',
-                    mode: 'no-cors', 
-                    body: JSON.stringify({
-                        action: 'register',
-                        eventId: eventId,
-                        chapter: displayUnit,
-                        title: title,
-                        name: name,
-                        email: email,
-                        photoData: base64Photo.split(',')[1],
-                        photoType: photoFile.type
-                    })
+                    mode: 'no-cors',
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'text/plain' }, // 繞過預檢
+                    body: JSON.stringify(payload)
                 });
 
-                const visitorId = 'v_' + Date.now();
+                // 資料寫入 Firebase
+                const visitorId = name + '_' + eventId; // 統一代碼格式
                 await db.ref('events_data/' + eventId + '/' + visitorId).set({
                     id: visitorId,
                     name: name,
@@ -155,7 +164,7 @@
                 Swal.fire({
                     icon: 'success',
                     title: '預約成功',
-                    text: 'QR Code 已寄送至您的信箱，請查收！',
+                    text: 'QR Code 已寄送至您的信箱，請查收！(若沒看到請檢查垃圾信箱)',
                     confirmButtonText: '太棒了'
                 }).then(() => location.reload());
 
