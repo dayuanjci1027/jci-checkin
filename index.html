@@ -956,10 +956,9 @@
             let list = Object.values(guestsData).filter(g => {
                 if (!g.arrived) return false;
                 
-                // 蝦霸修正：根據老大要求，只顯示職稱為「總會長」或「會長」的貴賓
-                // 過濾掉其他包含會長字眼的職稱 (ex: 副會長、前會長)
-                const title = (g.title || "").trim();
-                if (title === "會長" || title === "總會長") {
+                // 蝦霸修正：只要職稱包含「會長」兩個字就上牆，但要排除「副會長」
+                const title = g.title || "";
+                if (title.indexOf('會長') > -1 && title.indexOf('副會長') === -1) {
                     return true;
                 }
                 
