@@ -1111,19 +1111,28 @@
             // 排序：數字大的排前面 (Desc)
             const sortFn = (a, b) => parseWeight(b.title) - parseWeight(a.title);
 
-            // 分組過濾 (依舊版邏輯：含"會長"/"主席" 且 含"屆"或"年"或"創會")
-            // 為了保險，這裡稍微寬鬆一點，只要有會長/主席就好，權重算出來是 0 的會排在最後
-            // 但依老大指示 "以前的程式碼"，舊版是 && title.indexOf("屆") > -1
-            // 不過有些可能寫 "2023會長"，所以我要把條件改成 "有權重 > 1" 或者 "含屆/年/創會"
+            // 分組過濾 (依舊版邏輯 + 排除 External/Officials)
+            // 條件：
+            // 1. 職稱含"會長"/"主席"
+            // 2. 職稱含"屆"或"年"或"創會" (或是4位數年份)
+            // 3. 排除 External (友會) 和 Officials (長官)
             
             const presidents = allArrived.filter(g => {
                 const t = g.title || "";
-                return t.indexOf("會長") > -1 && (t.indexOf("屆") > -1 || t.indexOf("年") > -1 || /\d{4}/.test(t) || t.indexOf("創會") > -1);
+                const grp = (g.group || "").trim().toLowerCase();
+                const isNotOutsider = grp !== 'external' && grp !== 'officials' && grp !== 'official'; // 多防一個 official 單數
+                const hasYear = (t.indexOf("屆") > -1 || t.indexOf("年") > -1 || /\d{4}/.test(t) || t.indexOf("創會") > -1);
+                
+                return t.indexOf("會長") > -1 && hasYear && isNotOutsider;
             }).sort(sortFn);
 
             const chairmen = allArrived.filter(g => {
                 const t = g.title || "";
-                return t.indexOf("主席") > -1 && (t.indexOf("屆") > -1 || t.indexOf("年") > -1 || /\d{4}/.test(t));
+                const grp = (g.group || "").trim().toLowerCase();
+                const isNotOutsider = grp !== 'external' && grp !== 'officials' && grp !== 'official';
+                const hasYear = (t.indexOf("屆") > -1 || t.indexOf("年") > -1 || /\d{4}/.test(t));
+                
+                return t.indexOf("主席") > -1 && hasYear && isNotOutsider;
             }).sort(sortFn);
 
             if(presidents.length === 0 && chairmen.length === 0) {
