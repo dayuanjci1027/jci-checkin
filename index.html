@@ -1086,18 +1086,20 @@
 
             const arrivedGuests = Object.values(guestsData).filter(g => g.arrived);
             
-            // 依您指示：移除 group 檢查，只看職稱；排序改為 (b - a) 新到舊
+            // 依您指示：All_data 模式，篩選 Internal 且職稱含會長/主席，排除副會長；排序改為新到舊 (b-a)
             
             const presidents = arrivedGuests.filter(g => {
                 const title = g.title || "";
-                // 只要職稱含"會長"且不含"副會長"
-                return title.indexOf('會長') > -1 && title.indexOf('副會長') === -1; 
+                const group = g.group || ""; // C欄 (group)
+                // 條件：Group=Internal, 職稱含"會長", 不含"副會長"
+                return group === 'Internal' && title.indexOf('會長') > -1 && title.indexOf('副會長') === -1; 
             }).sort((a,b) => (b.originalIndex||0) - (a.originalIndex||0));
 
             const chairmen = arrivedGuests.filter(g => {
                 const title = g.title || "";
-                // 只要職稱含"主席"且不含"副主席"
-                return title.indexOf('主席') > -1 && title.indexOf('副主席') === -1;
+                const group = g.group || ""; // C欄 (group)
+                // 條件：Group=Internal, 職稱含"主席", 不含"副主席"
+                return group === 'Internal' && title.indexOf('主席') > -1 && title.indexOf('副主席') === -1;
             }).sort((a,b) => (b.originalIndex||0) - (a.originalIndex||0));
 
             if(presidents.length === 0 && chairmen.length === 0) {
