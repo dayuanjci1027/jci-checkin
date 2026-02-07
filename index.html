@@ -216,11 +216,17 @@
         .mc-layout { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; }
         .mc-column { flex: 1; min-width: 300px; background: white; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); overflow: hidden; }
         .mc-header { background: #005780; color: white; font-weight: bold; padding: 15px; font-size: 1.3rem; text-align: center; border-bottom: 3px solid #FFC107; letter-spacing: 1px; }
-        .mc-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; font-size: 1.1rem; }
+        .mc-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; font-size: 1.1rem; white-space: nowrap; overflow: hidden; }
         .mc-item:nth-child(even) { background: #fafafa; }
         .mc-time { font-size: 0.9rem; color: #666; background: #eee; padding: 4px 8px; border-radius: 6px; margin-right: 12px; font-weight: bold; min-width: 50px; text-align: center;}
-        .mc-name { font-weight: bold; font-size: 1.5rem; margin-right: 10px; color: #333; }
-        .mc-title { color: var(--jci-blue); font-weight: bold; font-size: 1.1rem; }
+        .mc-name { font-weight: bold; font-size: 1.5rem; margin-right: 10px; color: #333; flex-shrink: 0; }
+        .mc-title { color: var(--jci-blue); font-weight: bold; font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; }
+        
+        @media (max-width: 600px) {
+            .mc-name { font-size: 1.3rem; }
+            .mc-title { font-size: 1rem; }
+            .mc-item { padding: 12px; }
+        }
 
         /* 活動結束橫幅 */
         #event-closed-banner {
