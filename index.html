@@ -114,6 +114,15 @@
         .vip-card.new-arrival { border-color: #ff3d00; background: #fff9c4; box-shadow: 0 0 40px rgba(255, 61, 0, 0.6); animation: distinctFlash 1.5s infinite alternate; transform: scale(1.05); z-index: 10; }
         @keyframes distinctFlash { 0% { border-color: #ff3d00; } 100% { border-color: #FFC107; } }
 
+        /* 回到頂端按鈕 */
+        #btn-back-to-top {
+            display: none; position: fixed; bottom: 100px; right: 30px; width: 50px; height: 50px;
+            background: rgba(0, 0, 0, 0.5); color: white; border-radius: 50%;
+            align-items: center; justify-content: center; font-size: 1.5rem;
+            cursor: pointer; z-index: 199; transition: 0.3s;
+        }
+        #btn-back-to-top:hover { background: rgba(0, 0, 0, 0.8); }
+
         .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--jci-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 4px 20px rgba(0,151,215,0.4); cursor: pointer; z-index: 200; }
         #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
@@ -325,6 +334,8 @@
 
     <div id="page-reception" class="page">
         <h2 style="margin-bottom:20px; text-align: center;">輸入端 (櫃台)</h2>
+        
+        <div id="btn-back-to-top" onclick="scrollToTop()">▲</div>
         
         <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px; font-size: 1.2rem;" onclick="toggleCamera()">📷 掃描 QR (後鏡頭)</button>
         
@@ -614,6 +625,9 @@
             document.querySelectorAll('.nav-group .nav-item').forEach(e => e.classList.remove('active'));
             document.querySelectorAll('#mobile-nav .nav-item').forEach(e => e.classList.remove('active'));
 
+            // 蝦霸修正：切換頁面時重置回到頂端按鈕
+            document.getElementById('btn-back-to-top').style.display = 'none';
+
             const navMap = {'kiosk':0, 'reception':1, 'dashboard':2, 'mc':3};
             if(navMap[p] !== undefined) {
                 const desktopItems = document.querySelectorAll('.nav-group .nav-item');
@@ -636,6 +650,22 @@
 
             checkSystemLock();
         }
+
+        // 蝦霸新增：回到頂端邏輯
+        function scrollToTop() {
+            const page = document.getElementById('page-reception');
+            page.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 監聽滾動顯示按鈕
+        document.getElementById('page-reception').addEventListener('scroll', function() {
+            const btn = document.getElementById('btn-back-to-top');
+            if (this.scrollTop > 300) {
+                btn.style.display = 'flex';
+            } else {
+                btn.style.display = 'none';
+            }
+        });
 
         function createNewEvent() {
             Swal.fire({ 
