@@ -1074,55 +1074,75 @@
             });
         }
 
-        // MC 頁面渲染邏輯 (補回)
+        // MC 頁面渲染邏輯 (V3.5 復刻版：權重排序)
         function renderMC() {
             const listP = document.getElementById('mc-list-presidents');
             const listC = document.getElementById('mc-list-chairmen');
-            const empty = document.getElementById('mc-empty');
-            if(!listP || !listC) return; // 防呆
+            const emptyMsg = document.getElementById('mc-empty');
+            
+            if(!listP || !listC) return;
 
             listP.innerHTML = '';
             listC.innerHTML = '';
-
-            const arrivedGuests = Object.values(guestsData).filter(g => g.arrived);
             
-            // 依您指示：絕對穩健版 (Trim + IgnoreCase)，確保抓到 Internal 的會長/主席，排除副職；排序新到舊
-            
-            const presidents = arrivedGuests.filter(g => {
-                const title = (g.title || "").trim();
-                const group = (g.group || "").trim(); 
-                // 條件：Group=Internal (忽略大小寫/空白), 職稱含"會長", 不含"副"
-                return group.toLowerCase() === 'internal' && title.indexOf('會長') > -1 && title.indexOf('副') === -1; 
-            }).sort((a,b) => (b.originalIndex||0) - (a.originalIndex||0));
+            // 只抓已報到的
+            let allArrived = Object.values(guestsData).filter(g => g.arrived);
 
-            const chairmen = arrivedGuests.filter(g => {
-                const title = (g.title || "").trim();
-                const group = (g.group || "").trim();
-                // 條件：Group=Internal (忽略大小寫/空白), 職稱含"主席", 不含"副"
-                return group.toLowerCase() === 'internal' && title.indexOf('主席') > -1 && title.indexOf('副') === -1;
-            }).sort((a,b) => (b.originalIndex||0) - (a.originalIndex||0));
-
-            if(presidents.length === 0 && chairmen.length === 0) {
-                empty.style.display = 'block';
-                document.querySelector('.mc-layout').style.display = 'none';
-            } else {
-                empty.style.display = 'none';
-                document.querySelector('.mc-layout').style.display = 'flex';
+            // ★★★ V3.5 復刻關鍵：屆數優先邏輯 ★★★
+            function parseWeight(title) {
+                if(!title) return 0;
+                if(title.indexOf("創會長") > -1) return 1; // 創會長最小 (最後)
+                
+                // 1. 先抓屆數 (例如 "35屆" -> 35)
+                const termMatch = title.match(/(\d+)\s*屆/);
+                if(termMatch) return parseInt(termMatch[1]); // 直接回傳 35
+                
+                // 2. 沒抓到屆數，才抓年份，並自動換算 (例如 2023 -> 33)
+                // 這裡假設 1990 是基底，依實際屆數調整
+                const yearMatch = title.match(/20\d{2}/);
+                if(yearMatch) return parseInt(yearMatch[0]) - 1989; // 修正：1990年是創會? 假設 2023=34屆，2023-1989=34
+                // 若不知基底，暫用 1990
+                
+                return 0;
             }
 
-            presidents.forEach(g => {
-                const div = document.createElement('div'); div.className = 'mc-item';
-                let timeStr = ""; if(g.timestamp) timeStr = new Date(g.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                div.innerHTML = `<div class="mc-time">${timeStr}</div><div class="mc-name">${g.name}</div><div class="mc-title">${g.title}</div>`;
-                listP.appendChild(div);
-            });
+            // 排序：數字大的排前面 (Desc)
+            const sortFn = (a, b) => parseWeight(b.title) - parseWeight(a.title);
 
-            chairmen.forEach(g => {
-                const div = document.createElement('div'); div.className = 'mc-item';
-                let timeStr = ""; if(g.timestamp) timeStr = new Date(g.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            // 分組過濾 (依舊版邏輯：含"會長"/"主席" 且 含"屆"或"年"或"創會")
+            // 為了保險，這裡稍微寬鬆一點，只要有會長/主席就好，權重算出來是 0 的會排在最後
+            // 但依老大指示 "以前的程式碼"，舊版是 && title.indexOf("屆") > -1
+            // 不過有些可能寫 "2023會長"，所以我要把條件改成 "有權重 > 1" 或者 "含屆/年/創會"
+            
+            const presidents = allArrived.filter(g => {
+                const t = g.title || "";
+                return t.indexOf("會長") > -1 && (t.indexOf("屆") > -1 || t.indexOf("年") > -1 || /\d{4}/.test(t) || t.indexOf("創會") > -1);
+            }).sort(sortFn);
+
+            const chairmen = allArrived.filter(g => {
+                const t = g.title || "";
+                return t.indexOf("主席") > -1 && (t.indexOf("屆") > -1 || t.indexOf("年") > -1 || /\d{4}/.test(t));
+            }).sort(sortFn);
+
+            if(presidents.length === 0 && chairmen.length === 0) {
+                if(emptyMsg) emptyMsg.style.display = 'block';
+                if(document.querySelector('.mc-layout')) document.querySelector('.mc-layout').style.display = 'none';
+            } else {
+                if(emptyMsg) emptyMsg.style.display = 'none';
+                if(document.querySelector('.mc-layout')) document.querySelector('.mc-layout').style.display = 'flex';
+            }
+
+            function addItem(g, container) {
+                const div = document.createElement('div'); 
+                div.className = 'mc-item';
+                let timeStr = ""; 
+                if(g.timestamp) timeStr = new Date(g.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
                 div.innerHTML = `<div class="mc-time">${timeStr}</div><div class="mc-name">${g.name}</div><div class="mc-title">${g.title}</div>`;
-                listC.appendChild(div);
-            });
+                container.appendChild(div);
+            }
+
+            presidents.forEach(g => addItem(g, listP));
+            chairmen.forEach(g => addItem(g, listC));
         }
         function ackGuest(id) { db.ref(`events_data/${currentEventId}/${id}`).update({ acked: true }); }
         
