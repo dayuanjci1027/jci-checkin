@@ -666,8 +666,10 @@
             if(navMap[p] !== undefined) {
                 const desktopItems = document.querySelectorAll('.nav-group .nav-item');
                 if(desktopItems[navMap[p]]) desktopItems[navMap[p]].classList.add('active');
+                
+                // 蝦霸修正：手機版選單多了一個「開發日誌」選項，導致索引偏移 (+1)
                 const mobileItems = document.querySelectorAll('#mobile-nav .nav-item');
-                if(mobileItems[navMap[p]]) mobileItems[navMap[p]].classList.add('active');
+                if(mobileItems[navMap[p] + 1]) mobileItems[navMap[p] + 1].classList.add('active');
             }
             if(p !== 'reception') stopCamera(); 
             if(p !== 'kiosk') stopKiosk();
