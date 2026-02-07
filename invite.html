@@ -140,27 +140,33 @@
                     photoType: photoFile.type
                 };
 
-                await fetch(GAS_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    cache: 'no-cache',
-                    headers: { 'Content-Type': 'text/plain' }, // 繞過預檢
-                    body: JSON.stringify(payload)
-                });
-
-                // 資料寫入 Firebase
+                // 1. 先寫入 Firebase (這才是真正讓現場掃碼能動的關鍵！)
                 const visitorId = name + '_' + eventId; // 統一代碼格式
                 await db.ref('events_data/' + eventId + '/' + visitorId).set({
                     id: visitorId,
                     name: name,
-                    title: displayUnit + ' ' + title,
+                    // 這裡的 title 會是掃碼時顯示的內容，建議合併顯示
+                    title: (displayUnit ? displayUnit + ' ' : '') + title,
                     arrived: false,
-                    photo: "", 
+                    photo: base64Photo, // 直接把 Base64 存進 Firebase 顯示用 (會比較大，但保證即時)
                     email: email,
                     isGuest: true,
-                    group: finalGroup
+                    group: finalGroup,
+                    timestamp: 0,
+                    originalIndex: 9999 // 排在後面
                 });
 
+                // 2. 同步發送給 GAS (寄信 + 備份到 Google Sheet)
+                // 使用 no-cors 模式發送，不等待回應 (Fire and Forget)
+                fetch(GAS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(payload)
+                }).catch(e => console.error("GAS Backup Error:", e));
+
+                // 3. 直接顯示成功，不依賴 GAS 回應
                 Swal.fire({
                     icon: 'success',
                     title: '預約成功',
