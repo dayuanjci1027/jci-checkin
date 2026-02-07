@@ -123,6 +123,15 @@
         }
         #btn-back-to-top:hover { background: rgba(0, 0, 0, 0.8); }
 
+        /* 回到底部按鈕 */
+        #btn-scroll-to-bottom {
+            display: none; position: fixed; bottom: 160px; right: 30px; width: 50px; height: 50px;
+            background: rgba(0, 0, 0, 0.5); color: white; border-radius: 50%;
+            align-items: center; justify-content: center; font-size: 1.5rem;
+            cursor: pointer; z-index: 199; transition: 0.3s;
+        }
+        #btn-scroll-to-bottom:hover { background: rgba(0, 0, 0, 0.8); }
+
         .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--jci-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 4px 20px rgba(0,151,215,0.4); cursor: pointer; z-index: 200; }
         #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
@@ -267,6 +276,7 @@
         </div>
         <div class="mobile-dropdown" id="mobile-nav">
             <div style="padding:15px; text-align:center; color:#999; font-size:0.8rem; border-bottom:1px solid #eee;">JCI Check-in System V2.0</div>
+            <div class="nav-item" onclick="showChangelog()">開發日誌</div>
             <div class="nav-item" onclick="goPage('kiosk')">自助報到</div>
 
             <div class="nav-item" onclick="goPage('reception')">輸入端</div>
@@ -338,6 +348,7 @@
         <h2 style="margin-bottom:20px; text-align: center;">輸入端 (櫃台)</h2>
         
         <div id="btn-back-to-top" onclick="scrollToTop()">▲</div>
+        <div id="btn-scroll-to-bottom" onclick="scrollToBottom()">▼</div>
         
         <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px; font-size: 1.2rem;" onclick="toggleCamera()">📷 掃描 QR (後鏡頭)</button>
         
@@ -659,15 +670,53 @@
             page.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        // 蝦霸新增：回到底部邏輯
+        function scrollToBottom() {
+            const page = document.getElementById('page-reception');
+            page.scrollTo({ top: page.scrollHeight, behavior: 'smooth' });
+        }
+
         // 監聽滾動顯示按鈕
         document.getElementById('page-reception').addEventListener('scroll', function() {
-            const btn = document.getElementById('btn-back-to-top');
+            const btnTop = document.getElementById('btn-back-to-top');
+            const btnBottom = document.getElementById('btn-scroll-to-bottom');
+            
+            // 顯示/隱藏回到頂端
             if (this.scrollTop > 300) {
-                btn.style.display = 'flex';
+                btnTop.style.display = 'flex';
             } else {
-                btn.style.display = 'none';
+                btnTop.style.display = 'none';
+            }
+
+            // 顯示/隱藏回到底部
+            if (this.scrollHeight - this.scrollTop - this.clientHeight < 100) {
+                 btnBottom.style.display = 'none';
+            } else {
+                 btnBottom.style.display = 'flex';
             }
         });
+
+        function showChangelog() {
+            Swal.fire({
+                title: '開發日誌',
+                html: `
+                    <div style="text-align:left; max-height: 300px; overflow-y: auto;">
+                        <h4 style="margin: 0 0 5px 0; color:var(--jci-blue);">V2.0 (進行中)</h4>
+                        <ul style="margin: 0 0 15px 0; padding-left: 20px; color:#666; font-size:0.9rem;">
+                            <li>(待更新...)</li>
+                        </ul>
+                        <h4 style="margin: 0 0 5px 0; color:var(--jci-blue);">V1.0</h4>
+                        <ul style="margin: 0 0 15px 0; padding-left: 20px; color:#666; font-size:0.9rem;">
+                            <li>開發 QR Code 簽到系統</li>
+                            <li>加入讀取 Google Sheet 功能</li>
+                            <li>整合會員卡 QR Code，一掃描即簽到</li>
+                        </ul>
+                    </div>
+                `,
+                confirmButtonText: '關閉'
+            });
+            toggleMenu(); // 關閉手機選單
+        }
 
         function createNewEvent() {
             Swal.fire({ 
