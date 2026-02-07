@@ -1086,23 +1086,19 @@
 
             const arrivedGuests = Object.values(guestsData).filter(g => g.arrived);
             
-            // 篩選條件：職稱含「會長」且不含「副會長」，且分類必須是 Internal (本會會員)
-            // 這裡假設 group 欄位存在，若無則暫時忽略 group 篩選，僅依職稱判斷
-            // 依您指示：Internal 分類是來自 Sheet 的原始資料，必須嚴格判斷
+            // 依您指示：移除 group 檢查，只看職稱；排序改為 (b - a) 新到舊
             
             const presidents = arrivedGuests.filter(g => {
                 const title = g.title || "";
-                const group = g.group || ""; 
-                // 嚴格限制：職稱含"會長"、不含"副會長"、且 Group 必須等於 "Internal" (本會會員)
-                return title.indexOf('會長') > -1 && title.indexOf('副會長') === -1 && group === 'Internal'; 
-            }).sort((a,b) => (a.originalIndex||0) - (b.originalIndex||0));
+                // 只要職稱含"會長"且不含"副會長"
+                return title.indexOf('會長') > -1 && title.indexOf('副會長') === -1; 
+            }).sort((a,b) => (b.originalIndex||0) - (a.originalIndex||0));
 
             const chairmen = arrivedGuests.filter(g => {
                 const title = g.title || "";
-                const group = g.group || "";
-                // 嚴格限制：職稱含"主席"、不含"副主席"、且 Group 必須等於 "Internal"
-                return title.indexOf('主席') > -1 && title.indexOf('副主席') === -1 && group === 'Internal';
-            }).sort((a,b) => (a.originalIndex||0) - (b.originalIndex||0));
+                // 只要職稱含"主席"且不含"副主席"
+                return title.indexOf('主席') > -1 && title.indexOf('副主席') === -1;
+            }).sort((a,b) => (b.originalIndex||0) - (a.originalIndex||0));
 
             if(presidents.length === 0 && chairmen.length === 0) {
                 empty.style.display = 'block';
