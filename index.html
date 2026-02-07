@@ -385,6 +385,21 @@
         <div id="dashboard-grid"></div>
     </div>
 
+    <div id="page-mc" class="page" style="background-color: var(--mc-bg);">
+        <h2 style="color:var(--jci-dark); margin:0 0 20px 0; text-align: center; padding-bottom: 10px;">🎤 會長、主席進場序</h2>
+        <div class="mc-layout">
+            <div class="mc-column">
+                <div class="mc-header">👑 歷屆會長進場序 (新➜舊)</div>
+                <div id="mc-list-presidents"></div>
+            </div>
+            <div class="mc-column">
+                <div class="mc-header">🎩 歷屆主席進場序 (新➜舊)</div>
+                <div id="mc-list-chairmen"></div>
+            </div>
+        </div>
+        <div id="mc-empty" style="text-align:center; color:#999; margin-top:50px; display:none; font-size: 1.5rem;">目前無會長/主席進場</div>
+    </div>
+
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyDLq7SrkQaCnjtsFArh0leKPJRbPFZTZnk",
@@ -1056,6 +1071,43 @@
                 d.className = cardClass; d.onclick = function() { ackGuest(g.id); }; d.style.cursor = "pointer";
                 d.innerHTML = `<img src="${getPhotoUrl(g.photo)}" class="avatar" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'"><div style="font-weight:bold;margin-bottom:5px; font-size:2.5rem; line-height:1.2;">${g.name}</div><div style="font-size:1.5rem;color:#666;">${g.title}</div>`;
                 grid.appendChild(d);
+            });
+        }
+
+        // MC 頁面渲染邏輯 (補回)
+        function renderMC() {
+            const listP = document.getElementById('mc-list-presidents');
+            const listC = document.getElementById('mc-list-chairmen');
+            const empty = document.getElementById('mc-empty');
+            if(!listP || !listC) return; // 防呆
+
+            listP.innerHTML = '';
+            listC.innerHTML = '';
+
+            const arrivedGuests = Object.values(guestsData).filter(g => g.arrived);
+            const presidents = arrivedGuests.filter(g => g.title && g.title.indexOf('會長') > -1).sort((a,b) => (a.originalIndex||0) - (b.originalIndex||0));
+            const chairmen = arrivedGuests.filter(g => g.title && g.title.indexOf('主席') > -1).sort((a,b) => (a.originalIndex||0) - (b.originalIndex||0));
+
+            if(presidents.length === 0 && chairmen.length === 0) {
+                empty.style.display = 'block';
+                document.querySelector('.mc-layout').style.display = 'none';
+            } else {
+                empty.style.display = 'none';
+                document.querySelector('.mc-layout').style.display = 'flex';
+            }
+
+            presidents.forEach(g => {
+                const div = document.createElement('div'); div.className = 'mc-item';
+                let timeStr = ""; if(g.timestamp) timeStr = new Date(g.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                div.innerHTML = `<div class="mc-time">${timeStr}</div><div class="mc-name">${g.name}</div><div class="mc-title">${g.title}</div>`;
+                listP.appendChild(div);
+            });
+
+            chairmen.forEach(g => {
+                const div = document.createElement('div'); div.className = 'mc-item';
+                let timeStr = ""; if(g.timestamp) timeStr = new Date(g.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                div.innerHTML = `<div class="mc-time">${timeStr}</div><div class="mc-name">${g.name}</div><div class="mc-title">${g.title}</div>`;
+                listC.appendChild(div);
             });
         }
         function ackGuest(id) { db.ref(`events_data/${currentEventId}/${id}`).update({ acked: true }); }
