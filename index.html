@@ -1033,9 +1033,23 @@
                 const isManual = !String(g.id).startsWith('u');
                 const manualTag = isManual ? '<span class="manual-tag">⚠️ 需人工</span>' : '';
 
-                const btnStyle = isEventClosed 
-                    ? "background:#999; cursor:not-allowed;" 
-                    : (g.arrived ? "background:#ccc;" : "background:var(--jci-blue);");
+                let btnText = "";
+                let btnStyle = "";
+
+                if (isEventClosed) {
+                    // 活動關閉時的檢視模式
+                    if (g.arrived) {
+                        btnText = "已到";
+                        btnStyle = "background:#28a745; cursor:not-allowed;"; // 綠色表示已出席
+                    } else {
+                        btnText = "未到";
+                        btnStyle = "background:#ccc; color:#666; cursor:not-allowed;"; // 灰色表示缺席
+                    }
+                } else {
+                    // 活動進行中的操作模式
+                    btnText = g.arrived ? '取消' : '簽到';
+                    btnStyle = g.arrived ? "background:#ccc; color:#333;" : "background:var(--jci-blue);";
+                }
                 
                 const delStyle = isEventClosed 
                     ? "background:#eee; color:#aaa; cursor:not-allowed;" 
@@ -1045,7 +1059,7 @@
                 d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
                 d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${getPhotoUrl(g.photo)}" class="guest-photo-small" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}${manualTag}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
                 <div style="display:flex; gap:5px;">
-                    <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;color:white;font-weight:bold;${btnStyle}">${g.arrived?'取消':'簽到'}</button>
+                    <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;color:white;font-weight:bold;${btnStyle}">${btnText}</button>
                     <button onclick="deleteGuest('${g.id}')" style="padding:6px 10px;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;${delStyle}">🗑️</button>
                 </div>`;
                 list.appendChild(d);
