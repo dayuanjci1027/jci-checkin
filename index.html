@@ -819,6 +819,12 @@
         }
 
         function selectEvent(id, name) {
+            // 蝦霸優化：切換前先清空資料與畫面，避免殘影
+            guestsData = {}; 
+            renderReception(); 
+            renderDashboard(); 
+            renderMC();
+
             currentEventId = id;
             document.getElementById('current-event-display').innerHTML = `<span>📅</span> ${name}`;
             db.ref(`events_data/${id}`).off();
@@ -913,6 +919,10 @@
             clearTimeout(kioskTimeout); 
             if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
             
+            // 蝦霸優化：無論成功失敗，這裡先清空輸入框，避免殘留
+            const inputEl = document.getElementById('kiosk-input');
+            if(inputEl) inputEl.value = '';
+
             // V6.4: 檢查注音
             if (/[\u3105-\u3129\u02CA\u02C7\u02CB\u02D9]/.test(uid)) {
                 Swal.fire({
