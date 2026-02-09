@@ -416,7 +416,7 @@
             appId: "1:526526638146:web:c69e758e8b3c1d5990e5db",
             measurementId: "G-SDY39SN348"
         };
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-ekAyhXD8FLUWv6Xnma2Uvn7htbJAULLGe_jjzVbhFCJkwBtilD5lH6UDVDu6drO0Sg/exec";
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwzuFSiq9SD6qcIYzHTxHAEN3ToI6H9G9vhELnaaJpP0WkGsccf8G571vX0RAj_kp7_lw/exec";
 
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -687,36 +687,47 @@
             checkSystemLock();
         }
 
-        // 蝦霸新增：回到頂端邏輯
+        // 蝦霸新增：回到頂端邏輯 (通用版)
         function scrollToTop() {
-            const page = document.getElementById('page-reception');
-            page.scrollTo({ top: 0, behavior: 'smooth' });
+            const activePage = document.querySelector('.page.active');
+            if(activePage) activePage.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // 蝦霸新增：回到底部邏輯
+        // 蝦霸新增：回到底部邏輯 (通用版)
         function scrollToBottom() {
-            const page = document.getElementById('page-reception');
-            page.scrollTo({ top: page.scrollHeight, behavior: 'smooth' });
+            const activePage = document.querySelector('.page.active');
+            if(activePage) activePage.scrollTo({ top: activePage.scrollHeight, behavior: 'smooth' });
         }
 
-        // 監聽滾動顯示按鈕
-        document.getElementById('page-reception').addEventListener('scroll', function() {
-            const btnTop = document.getElementById('btn-back-to-top');
-            const btnBottom = document.getElementById('btn-scroll-to-bottom');
-            
-            // 顯示/隱藏回到頂端
-            if (this.scrollTop > 300) {
-                btnTop.style.display = 'flex';
-            } else {
-                btnTop.style.display = 'none';
-            }
+        // 監聽滾動顯示按鈕 (針對所有頁面)
+        document.querySelectorAll('.page').forEach(page => {
+            page.addEventListener('scroll', function() {
+                // 只在當前活動頁面顯示按鈕
+                if(!this.classList.contains('active')) return;
 
-            // 顯示/隱藏回到底部
-            if (this.scrollHeight - this.scrollTop - this.clientHeight < 100) {
-                 btnBottom.style.display = 'none';
-            } else {
-                 btnBottom.style.display = 'flex';
-            }
+                const btnTop = document.getElementById('btn-back-to-top');
+                const btnBottom = document.getElementById('btn-scroll-to-bottom');
+                
+                // 顯示/隱藏回到頂端
+                if (this.scrollTop > 300) {
+                    btnTop.style.display = 'flex';
+                } else {
+                    btnTop.style.display = 'none';
+                }
+
+                // 顯示/隱藏回到底部
+                // 判斷是否到底部：scrollHeight - scrollTop - clientHeight < 閾值
+                if (this.scrollHeight - this.scrollTop - this.clientHeight < 100) {
+                     btnBottom.style.display = 'none';
+                } else {
+                     // 只有當內容長度超過視窗高度時才顯示
+                     if(this.scrollHeight > this.clientHeight) {
+                        btnBottom.style.display = 'flex';
+                     } else {
+                        btnBottom.style.display = 'none';
+                     }
+                }
+            });
         });
 
         function showChangelog() {
@@ -1202,18 +1213,47 @@
                 Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
                 
                 const typeParam = onlyInternal ? 'internal' : 'all'; 
+                const eventIdParam = onlyInternal ? `&eventId=${currentEventId}` : '';
                 
-                fetch(`${GOOGLE_SCRIPT_URL}?op=get_all&type=${typeParam}&_t=${new Date().getTime()}`).then(r => r.json()).then(data => {
-                    if(data.status === 'error') return Swal.fire("錯誤", data.msg, "error");
+                // 蝦霸備註：這裡使用 JSONP 或者是直接 CORS (GAS 若有設定 Access-Control-Allow-Origin: *)
+                // 如果遇到 CORS 錯誤，請確認 GAS 腳本的 doGet 回傳是否正確設置 Header
+                fetch(GOOGLE_SCRIPT_URL + `?op=get_all&type=${typeParam}${eventIdParam}&_t=${new Date().getTime()}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if(data.status === 'error') return Swal.fire("錯誤", data.message || "未知錯誤", "error");
 
-                    const newData = {};
-                    let count = 0;
-                    data.forEach((row, index) => {
-                        newData[row.id] = { id: row.id, name: row.name, title: row.title, group: row.group, photo: row.photo, arrived: false, timestamp: 0, originalIndex: index };
-                        count++;
+                        const newData = {};
+                        let count = 0;
+                        // 修正：檢查 data.data 是否存在 (因為 GAS 回傳格式是 {status, data: []})
+                        const list = data.data || []; 
+                        
+                        list.forEach((row, index) => {
+                            // 使用更穩健的 ID 生成策略，避免重複
+                            const uniqueId = row.id || `imported_${Date.now()}_${index}`;
+                            newData[uniqueId] = {
+                                id: uniqueId,
+                                name: row.name,
+                                title: row.title,
+                                group: row.group,
+                                photo: row.photo || "",
+                                arrived: false,
+                                timestamp: 0,
+                                originalIndex: index
+                            };
+                            count++;
+                        });
+                        
+                        if(count === 0) return Swal.fire("注意", "雲端沒有資料，或格式不正確", "warning");
+
+                        db.ref(`events_data/${currentEventId}`).set(newData).then(() => {
+                            Swal.close();
+                            Swal.fire("同步成功", `已成功匯入 ${count} 筆資料`, "success");
+                        });
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        Swal.fire("同步失敗", "請檢查網路或 GAS 權限: " + err.message, "error");
                     });
-                    db.ref(`events_data/${currentEventId}`).set(newData).then(() => Swal.fire("同步成功", `匯入 ${count} 筆`, "success"));
-                });
             });
         }
 

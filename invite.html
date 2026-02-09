@@ -11,7 +11,7 @@
     <style>
         :root { --jci-blue: #0097D7; --jci-dark: #005780; --bg-gradient: linear-gradient(135deg, #0097D7 0%, #005780 100%); }
         body { font-family: 'Noto Sans TC', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 90%; max-width: 450px; text-align: center; margin: 20px auto; }
         .logo-text { font-size: 1.8rem; font-weight: bold; color: var(--jci-blue); margin-bottom: 5px; }
         .sub-text { color: #666; margin-bottom: 25px; }
         .form-group { text-align: left; margin-bottom: 15px; }
@@ -70,8 +70,8 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // 蝦霸更新：這是最新版本的 GAS 連結 (v29)
-        const GAS_URL = "https://script.google.com/macros/s/AKfycby-ekAyhXD8FLUWv6Xnma2Uvn7htbJAULLGe_jjzVbhFCJkwBtilD5lH6UDVDu6drO0Sg/exec";
+        // 蝦霸更新：這是最新版本的 GAS 連結 (v40 蝦霸更新)
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwzuFSiq9SD6qcIYzHTxHAEN3ToI6H9G9vhELnaaJpP0WkGsccf8G571vX0RAj_kp7_lw/exec";
 
         const urlParams = new URLSearchParams(window.location.search);
         const eventId = urlParams.get('event');
@@ -141,7 +141,9 @@
                 };
 
                 // 1. 先寫入 Firebase (這才是真正讓現場掃碼能動的關鍵！)
-                const visitorId = name + '_' + eventId; // 統一代碼格式
+                // 蝦霸修正：使用 timestamp 避免同名覆蓋
+                const uniqueId = Date.now().toString().slice(-6);
+                const visitorId = `${name}_${uniqueId}`; 
                 await db.ref('events_data/' + eventId + '/' + visitorId).set({
                     id: visitorId,
                     name: name,
@@ -158,13 +160,15 @@
 
                 // 2. 同步發送給 GAS (寄信 + 備份到 Google Sheet)
                 // 使用 no-cors 模式發送，不等待回應 (Fire and Forget)
+                // 蝦霸備註: 這裡故意用 text/plain 避免触发 CORS preflight
                 fetch(GAS_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     cache: 'no-cache',
-                    headers: { 'Content-Type': 'text/plain' },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
-                }).catch(e => console.error("GAS Backup Error:", e));
+                }).then(() => console.log("GAS Sync initiated"))
+                  .catch(e => console.error("GAS Backup Error:", e));
 
                 // 3. 直接顯示成功，不依賴 GAS 回應
                 Swal.fire({

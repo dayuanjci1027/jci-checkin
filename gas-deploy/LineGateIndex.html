@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <style>
+      /* =========================================
+         0. 全域與 JCI 配色
+         ========================================= */
+      :root {
+        --jci-blue: #0097D7;
+        --jci-navy: #003C88;
+        --jci-green: #28a745;
+        --jci-red: #dc3545; /* 新增紅色用於登出 */
+        --bg-color: #f3f6f9;
+        --text-dark: #1a1a1a;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg-color); margin: 0; padding: 0; color: var(--text-dark);
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      /* =========================================
+         1. 登入介面
+         ========================================= */
+      #login-view {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+        background: #fff; z-index: 10;
+        display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+        overflow-y: auto;
+      }
+      
+      .login-banner {
+        width: 100%; height: 260px;
+        background: linear-gradient(135deg, var(--jci-navy) 0%, var(--jci-blue) 100%);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        color: white; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px;
+        margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,60,136,0.3);
+        transition: height 0.3s ease; /* 加入動畫 */
+      }
+      .banner-icon {
+        font-size: 50px; margin-bottom: 15px; background: rgba(255,255,255,0.2);
+        width: 90px; height: 90px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      }
+      .banner-title { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+      .banner-subtitle { font-size: 14px; opacity: 0.9; }
+      
+      .login-form { width: 85%; max-width: 360px; display: flex; flex-direction: column; gap: 16px; }
+      .input-label { font-size: 14px; color: var(--jci-navy); font-weight: 600; margin-bottom: 6px; display: block; }
+      .login-input {
+        width: 100%; padding: 14px; font-size: 16px; border: 1px solid #e0e6ed;
+        border-radius: 10px; box-sizing: border-box; outline: none; background: #f8faff;
+      }
+      .login-input:focus { border-color: var(--jci-blue); background: #fff; }
+      .login-btn {
+        margin-top: 10px; width: 100%; padding: 14px; font-size: 18px; font-weight: 600;
+        color: white; background: var(--jci-navy); border: none; border-radius: 10px; cursor: pointer;
+      }
+      .error-msg { color: #ff3b3b; font-size: 14px; text-align: center; font-weight: bold; margin-top: 5px; }
+      
+      /* =========================================
+         2. 成功跳轉區
+         ========================================= */
+      #redirect-area {
+        display: none; width: 100%; flex-direction: column; align-items: center;
+        margin-top: 20px; animation: fadeIn 0.5s;
+      }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+      .success-text {
+        font-size: 20px; font-weight: bold; color: var(--jci-navy); margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .btn-go-target {
+        display: flex; align-items: center; justify-content: center;
+        background: var(--jci-green); color: white;
+        text-decoration: none; width: 100%; padding: 16px; border-radius: 12px;
+        font-size: 18px; font-weight: bold;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        transition: transform 0.1s;
+      }
+      .btn-go-target:active { transform: scale(0.98); }
+      .btn-go-target span { margin-right: 8px; font-size: 24px; }
+
+      /* =========================================
+         3. 登出按鈕 (新增)
+         ========================================= */
+      .logout-link {
+        margin-top: 20px; color: #999; font-size: 14px; text-decoration: underline; cursor: pointer;
+      }
+      .logout-link:hover { color: var(--jci-red); }
+
+    </style>
+
+    <script>
+      // 後端傳來的驗證資料
+      var membersData = <?!= JSON.stringify(members) ?>;
+
+      // ★★★ 設定區 ★★★
+      var targetUrl = 'https://line.me/R/ti/p/@265jvlrx'; 
+      var STORAGE_KEY = 'JCI_MEMBER_AUTH_V1'; // localStorage 的 Key
+
+      // 頁面載入時，檢查是否有舊紀錄
+      window.onload = function() {
+        checkAutoLogin();
+      };
+
+      // 檢查 localStorage 是否有儲存的帳密
+      function checkAutoLogin() {
+        var storedAuth = localStorage.getItem(STORAGE_KEY);
+        if (storedAuth) {
+          try {
+            var authData = JSON.parse(storedAuth);
+            // 嘗試使用儲存的資料進行驗證 (不顯示 alert 錯誤)
+            validateMember(authData.acc, authData.pwd, true);
+          } catch (e) {
+            console.error("Local storage parse error", e);
+            localStorage.removeItem(STORAGE_KEY);
+          }
+        }
+      }
+
+      // 按下登入按鈕
+      function attemptLogin() {
+        var accInput = document.getElementById("login-acc").value.trim().toUpperCase();
+        var pwdInput = document.getElementById("login-pwd").value.trim();
+        var errorDiv = document.getElementById("login-error");
+
+        if (!accInput || !pwdInput) {
+          errorDiv.textContent = "請輸入帳號與密碼"; return;
+        }
+
+        // 呼叫驗證邏輯 (fromManual = true 表示是手動輸入，要存檔)
+        validateMember(accInput, pwdInput, false);
+      }
+
+      // 核心驗證邏輯
+      function validateMember(acc, pwd, isAutoLogin) {
+        var errorDiv = document.getElementById("login-error");
+        var found = false;
+        var memberName = "";
+        var isFormerMember = false;
+
+        // 比對資料
+        for (var i = 0; i < membersData.length; i++) {
+          var m = membersData[i];
+          if (m.a === acc && m.p === pwd) {
+            if (m.r && m.r.indexOf('前會員') !== -1) {
+              isFormerMember = true; 
+              break;
+            }
+            found = true; 
+            memberName = m.n; 
+            break;
+          }
+        }
+
+        // 處理前會員
+        if (isFormerMember) {
+          if (!isAutoLogin) {
+            errorDiv.textContent = "抱歉，前會員無法存取此頁面";
+            document.getElementById("login-pwd").value = "";
+          } else {
+            // 如果是自動登入發現變成了前會員，清除紀錄
+            logout();
+          }
+          return;
+        }
+
+        // 驗證成功
+        if (found) {
+          // 1. 寫入後端紀錄
+          if (!isAutoLogin) {
+             // 只有手動登入時才寫入 Log，避免每次重新整理都寫入 (視需求而定)
+             google.script.run.recordAccessLog(memberName, acc);
+          }
+          
+          // 2. 如果是手動登入，將資料存入 localStorage
+          if (!isAutoLogin) {
+            var authData = { acc: acc, pwd: pwd, timestamp: new Date().getTime() };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(authData));
+          }
+
+          // 3. 切換介面
+          switchToSuccessView(memberName);
+
+        } else {
+          // 驗證失敗
+          if (!isAutoLogin) {
+            errorDiv.textContent = "帳號或密碼錯誤";
+            document.getElementById("login-pwd").value = "";
+          } else {
+            // 自動登入失敗 (可能改密碼了)，清除並顯示登入頁
+            console.log("Auto login failed, credentials invalid.");
+            localStorage.removeItem(STORAGE_KEY);
+          }
+        }
+      }
+
+      // 切換到成功畫面
+      function switchToSuccessView(name) {
+        var formArea = document.querySelector(".login-form");
+        var redirectArea = document.getElementById("redirect-area");
+        var bannerSub = document.querySelector(".banner-subtitle");
+        var bannerIcon = document.querySelector(".banner-icon");
+        var btn = document.getElementById("go-btn");
+
+        // 隱藏表單
+        formArea.style.display = "none";
+        
+        // 更新 Banner
+        bannerSub.textContent = "歡迎您，" + name;
+        bannerIcon.textContent = "👋"; // 換個圖示
+        
+        // 設定連結
+        btn.href = targetUrl;
+        
+        // 顯示跳轉區
+        redirectArea.style.display = "flex";
+      }
+
+      // 登出功能
+      function logout() {
+        if(confirm("確定要切換帳號/登出嗎？")) {
+          localStorage.removeItem(STORAGE_KEY);
+          location.reload();
+        }
+      }
+
+    </script>
+  </head>
+
+  <body>
+    <div id="login-view">
+      <div class="login-banner">
+        <div class="banner-icon">🔒</div>
+        <div class="banner-title">會員驗證</div> 
+        <div class="banner-subtitle">請輸入身分證字號與出生年月日</div>
+      </div>
+
+      <div class="login-form">
+        <label class="input-label">身分證字號 (帳號)</label>
+        <input type="text" id="login-acc" class="login-input" placeholder="例如：A123456789" 
+               oninput="this.value = this.value.toUpperCase()" style="text-transform:uppercase;">
+        <label class="input-label">西元出生年月日 (密碼)</label>
+        <input type="password" id="login-pwd" class="login-input" placeholder="西元8碼 例如：19900101">
+        
+        <div id="login-error" class="error-msg"></div>
+        <button class="login-btn" onclick="attemptLogin()">驗證身分</button>
+      </div>
+
+      <div id="redirect-area" class="login-form">
+        <div class="success-text">驗證成功！</div>
+        <a id="go-btn" href="#" class="btn-go-target" target="_blank">
+          <span>🚀</span> 點此前往
+        </a>
+        
+        <div class="logout-link" onclick="logout()">切換帳號 / 登出</div>
+      </div>
+
+    </div>
+  </body>
+</html>
