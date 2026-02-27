@@ -9,7 +9,9 @@ const CONFIG = {
   FOLDER_ID: '1O2LpYf2fO6m5XnQ_xS5y_9iPgKs6HlaL', 
   GUEST_SHEET_NAME: '外會預約名單',
   INTERNAL_SHEET_NAME: 'Internal',
-  ALL_DATA_SHEET_NAME: 'all_data'
+  ALL_DATA_SHEET_NAME: 'All_Data',  // 修正：匹配實際工作表名稱（大寫）
+  EXTERNAL_SHEET_NAME: 'External',   // 新增：External 工作表
+  OFFICIALS_SHEET_NAME: 'Officials'  // 新增：Officials 工作表
 };
 
 function doGet(e) {
@@ -79,42 +81,44 @@ function handleGetInternalPlusGuest() {
   var ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   var results = [];
   
-  // 1. 讀取 Internal (會內)
+  // 輔助函數：清理 ID
+  function cleanId(rawId, prefix, index) {
+    if (!rawId) return prefix + index;
+    var id = rawId.toString();
+    if (id.indexOf('#N/A') >= 0 || id.indexOf('#') >= 0 || id.indexOf('.') >= 0 || 
+        id.indexOf('$') >= 0 || id.indexOf('/') >= 0 || id.indexOf('[') >= 0 || 
+        id.indexOf(']') >= 0 || id.trim() === '') {
+      return prefix + index;
+    }
+    return id.trim().toLowerCase();
+  }
+  
+  // 1. 讀取 Internal (會內) - 格式：[姓名, 職稱, 分類, ID, Photo]
   var internalSheet = ss.getSheetByName(CONFIG.INTERNAL_SHEET_NAME);
   if (internalSheet) {
     var iValues = internalSheet.getDataRange().getValues();
     for (var i = 1; i < iValues.length; i++) {
       var r = iValues[i];
       if (!r[0]) continue;
-      // 修正：ID 轉小寫並清理，過濾掉 #N/A 等無效值
-      var rawId = r[3] ? r[3].toString() : ("int_" + i);
-      // 如果 ID 是 #N/A 或包含非法字符，生成一個新的
-      if (rawId.indexOf('#N/A') >= 0 || rawId.indexOf('#') >= 0 || rawId.indexOf('.') >= 0 || 
-          rawId.indexOf('$') >= 0 || rawId.indexOf('/') >= 0 || rawId.indexOf('[') >= 0 || 
-          rawId.indexOf(']') >= 0 || rawId.trim() === '') {
-        rawId = "int_" + i;
-      }
       results.push({
-        id: rawId.trim().toLowerCase(),
+        id: cleanId(r[3], "int_", i),
         name: r[0].toString(),
         title: r[1] ? r[1].toString() : "",
-        group: "Internal", // 強制標記為 Internal
+        group: "Internal",
         photo: r[4] ? r[4].toString() : ""
       });
     }
   }
 
-  // 2. 讀取 外會預約名單 (Guest)
+  // 2. 讀取 外會預約名單 (Guest) - 格式：[時間, 姓名, 職稱, 單位, 分類, Email, QRCode, Photo, EventID]
   var guestSheet = ss.getSheetByName(CONFIG.GUEST_SHEET_NAME);
   if (guestSheet) {
     var gValues = guestSheet.getDataRange().getValues();
-    // 外會預約名單格式：[時間, 姓名, 職稱, 單位, 分類, Email, QRCode, Photo, EventID]
-    // 欄位索引：1=姓名, 2=職稱, 3=單位, 4=分類, 7=Photo, 8=EventID
     for (var j = 1; j < gValues.length; j++) {
       var g = gValues[j];
       if (!g[1]) continue;
       results.push({
-        id: "guest_" + j, // 預約名單可能沒有固定 ID，用 guest_索引 代替
+        id: "guest_" + j,
         name: g[1].toString(),
         title: g[2] ? g[2].toString() : "",
         group: g[4] ? g[4].toString() : "Guest",
