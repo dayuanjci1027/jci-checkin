@@ -40,6 +40,20 @@ function handleGetAll() {
   var ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   var results = [];
   
+  // 輔助函數：把 Google Drive ID 轉換成圖片網址
+  function convertPhotoUrl(photoInput) {
+    if (!photoInput) return "";
+    var photo = photoInput.toString().trim();
+    if (!photo) return "";
+    // 如果已經是完整網址，直接回傳
+    if (photo.indexOf('http') === 0) return photo;
+    // 如果是 Drive 檔案 ID，轉換成圖片網址
+    if (photo.length > 10 && photo.indexOf('/') < 0 && photo.indexOf('.') < 0) {
+      return "https://lh3.googleusercontent.com/d/" + photo;
+    }
+    return photo;
+  }
+  
   // 1. 讀取 Internal (會內) - 有照片(G欄)和ID(F欄)
   var internalSheet = ss.getSheetByName(CONFIG.INTERNAL_SHEET_NAME);
   if (internalSheet) {
@@ -57,7 +71,7 @@ function handleGetAll() {
         name: r[0].toString(),
         title: r[1] ? r[1].toString() : "",
         group: "Internal",
-        photo: r[6] ? r[6].toString() : ""
+        photo: convertPhotoUrl(r[6])
       });
     }
   }
@@ -74,7 +88,7 @@ function handleGetAll() {
         name: g[1].toString(),
         title: g[2] ? g[2].toString() : "",
         group: g[4] ? g[4].toString() : "Guest",
-        photo: g[7] ? g[7].toString() : ""
+        photo: convertPhotoUrl(g[7])
       });
     }
   }
@@ -129,6 +143,18 @@ function handleGetInternalPlusGuest() {
     return id.trim().toLowerCase();
   }
   
+  // 輔助函數：把 Google Drive ID 轉換成圖片網址
+  function convertPhotoUrl(photoInput) {
+    if (!photoInput) return "";
+    var photo = photoInput.toString().trim();
+    if (!photo) return "";
+    if (photo.indexOf('http') === 0) return photo;
+    if (photo.length > 10 && photo.indexOf('/') < 0 && photo.indexOf('.') < 0) {
+      return "https://lh3.googleusercontent.com/d/" + photo;
+    }
+    return photo;
+  }
+  
   // 1. 讀取 Internal (會內) - 格式：[姓名, 職稱, 分類, ?, ?, ID, Photo]
   var internalSheet = ss.getSheetByName(CONFIG.INTERNAL_SHEET_NAME);
   if (internalSheet) {
@@ -141,7 +167,7 @@ function handleGetInternalPlusGuest() {
         name: r[0].toString(),
         title: r[1] ? r[1].toString() : "",
         group: "Internal",
-        photo: r[6] ? r[6].toString() : ""
+        photo: convertPhotoUrl(r[6])
       });
     }
   }
@@ -158,7 +184,7 @@ function handleGetInternalPlusGuest() {
         name: g[1].toString(),
         title: g[2] ? g[2].toString() : "",
         group: g[4] ? g[4].toString() : "Guest",
-        photo: g[7] ? g[7].toString() : ""
+        photo: convertPhotoUrl(g[7])
       });
     }
   }
