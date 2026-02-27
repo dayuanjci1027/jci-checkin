@@ -23,7 +23,10 @@ function doGet(e) {
       return handleGetAll(); // 全體名單 (all_data)
     }
   }
-  return ContentService.createTextOutput("大園青商簽到服務運行中");
+  // 修正：加入 CORS Header
+  return ContentService.createTextOutput("大園青商簽到服務運行中")
+    .setMimeType(ContentService.MimeType.TEXT)
+    .setHeaders({'Access-Control-Allow-Origin': '*'});
 }
 
 function doPost(e) {
@@ -47,16 +50,28 @@ function handleGetAll() {
     var r = values[i];
     if (!r[0]) continue; // 沒姓名就跳過
     
+    // 修正：處理 ID，過濾掉 #N/A 等無效值
+    var rawId = r[3] ? r[3].toString() : ("u" + (1000 + i));
+    // 如果 ID 是 #N/A 或包含非法字符，生成一個新的
+    if (rawId.indexOf('#N/A') >= 0 || rawId.indexOf('#') >= 0 || rawId.indexOf('.') >= 0 || 
+        rawId.indexOf('$') >= 0 || rawId.indexOf('/') >= 0 || rawId.indexOf('[') >= 0 || 
+        rawId.indexOf(']') >= 0 || rawId.trim() === '') {
+      rawId = "u" + (1000 + i);
+    }
+    var cleanId = rawId.trim().toLowerCase();
+    
     results.push({
-      id: r[3] ? r[3].toString() : ("u" + (1000 + i)), 
+      id: cleanId, 
       name: r[0].toString(),
       title: r[1] ? r[1].toString() : "",
       group: r[2] ? r[2].toString() : "Internal",
       photo: r[4] ? r[4].toString() : ""
     });
   }
-  // 修正：回傳統一格式 {status, data}
-  return ContentService.createTextOutput(JSON.stringify({status: 'success', data: results})).setMimeType(ContentService.MimeType.JSON);
+  // 修正：回傳統一格式 {status, data}，並加入 CORS Header
+  return ContentService.createTextOutput(JSON.stringify({status: 'success', data: results}))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeaders({'Access-Control-Allow-Origin': '*'});
 }
 
 /** 獲取會內 + 外會預約名單 (合併 Internal 和 外會預約名單) */
@@ -71,8 +86,16 @@ function handleGetInternalPlusGuest() {
     for (var i = 1; i < iValues.length; i++) {
       var r = iValues[i];
       if (!r[0]) continue;
+      // 修正：ID 轉小寫並清理，過濾掉 #N/A 等無效值
+      var rawId = r[3] ? r[3].toString() : ("int_" + i);
+      // 如果 ID 是 #N/A 或包含非法字符，生成一個新的
+      if (rawId.indexOf('#N/A') >= 0 || rawId.indexOf('#') >= 0 || rawId.indexOf('.') >= 0 || 
+          rawId.indexOf('$') >= 0 || rawId.indexOf('/') >= 0 || rawId.indexOf('[') >= 0 || 
+          rawId.indexOf(']') >= 0 || rawId.trim() === '') {
+        rawId = "int_" + i;
+      }
       results.push({
-        id: r[3] ? r[3].toString() : ("int_" + i),
+        id: rawId.trim().toLowerCase(),
         name: r[0].toString(),
         title: r[1] ? r[1].toString() : "",
         group: "Internal", // 強制標記為 Internal
@@ -100,7 +123,10 @@ function handleGetInternalPlusGuest() {
     }
   }
 
-  return ContentService.createTextOutput(JSON.stringify(results)).setMimeType(ContentService.MimeType.JSON);
+  // 修正：回傳統一格式 {status, data}，並加入 CORS Header
+  return ContentService.createTextOutput(JSON.stringify({status: 'success', data: results}))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeaders({'Access-Control-Allow-Origin': '*'});
 }
 
 /** 處理外會來賓預約 (健壯版本 v39) */
