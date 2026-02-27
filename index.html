@@ -923,6 +923,9 @@
             const inputEl = document.getElementById('kiosk-input');
             if(inputEl) inputEl.value = '';
 
+            // 修正：清理掃碼內容（去除空格、轉小寫）
+            uid = uid.trim().toLowerCase();
+
             // V6.4: 檢查注音
             if (/[\u3105-\u3129\u02CA\u02C7\u02CB\u02D9]/.test(uid)) {
                 Swal.fire({
@@ -939,15 +942,25 @@
 
             if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "報到無效", "error").then(() => stopKiosk());
 
-            if(guestsData[uid]) {
-                const g = guestsData[uid];
-                const isDuplicate = g.arrived;
-                if(!isDuplicate) checkIn(uid, true);
+            // 修正：使用清理後的 ID 進行比對（同時也檢查原始大小寫）
+            let guest = guestsData[uid];
+            if (!guest) {
+                // 如果找不到，嘗試找原始大小寫版本
+                const allIds = Object.keys(guestsData);
+                const matchedId = allIds.find(id => id.toLowerCase() === uid);
+                if (matchedId) guest = guestsData[matchedId];
+            }
+            
+            if(guest) {
+                const isDuplicate = guest.arrived;
+                // 使用正確的 ID 進行簽到
+                const guestId = Object.keys(guestsData).find(id => guestsData[id] === guest) || uid;
+                if(!isDuplicate) checkIn(guestId, true);
 
                 document.getElementById('kiosk-success-view').style.display = 'block';
-                document.getElementById('kiosk-photo').src = getPhotoUrl(g.photo);
-                document.getElementById('kiosk-name').innerText = g.name;
-                document.getElementById('kiosk-title').innerText = g.title;
+                document.getElementById('kiosk-photo').src = getPhotoUrl(guest.photo);
+                document.getElementById('kiosk-name').innerText = guest.name;
+                document.getElementById('kiosk-title').innerText = guest.title;
 
                 const statusText = document.getElementById('kiosk-status');
                 const statusIcon = document.getElementById('kiosk-icon');
@@ -985,17 +998,31 @@
             document.getElementById('btn-cam').style.background = "#333";
             isScanningProcessing = false;
             html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (uid)=>{
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (rawUid)=>{
                 if(isScanningProcessing) return; 
                 isScanningProcessing = true;
                 
+                // 修正：清理掃碼內容
+                const uid = rawUid.trim().toLowerCase();
+                
                 if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "操作無效", "error").then(() => { isScanningProcessing = false; stopCamera(); });
 
-                if(guestsData[uid]) {
-                    const g = guestsData[uid];
-                    const isDuplicate = g.arrived;
-                    if(!isDuplicate) { checkIn(uid, true); }
-                    showReceptionResult(g, isDuplicate);
+                // 修正：支援大小寫不敏感的 ID 比對
+                let guest = guestsData[uid];
+                let actualId = uid;
+                if (!guest) {
+                    const allIds = Object.keys(guestsData);
+                    const matchedId = allIds.find(id => id.toLowerCase() === uid);
+                    if (matchedId) {
+                        guest = guestsData[matchedId];
+                        actualId = matchedId;
+                    }
+                }
+
+                if(guest) {
+                    const isDuplicate = guest.arrived;
+                    if(!isDuplicate) { checkIn(actualId, true); }
+                    showReceptionResult(guest, isDuplicate);
                     setTimeout(() => { closeReceptionResult(); isScanningProcessing = false; }, 3000);
                 } else {
                     Swal.fire({ icon: 'error', title: '錯誤', text: '非本場名單', timer: 1500, showConfirmButton: false }).then(() => { isScanningProcessing = false; });
@@ -1252,8 +1279,9 @@
                         const list = data.data || []; 
                         
                         list.forEach((row, index) => {
-                            // 使用更穩健的 ID 生成策略，避免重複
-                            const uniqueId = row.id || `imported_${Date.now()}_${index}`;
+                            // 修正：ID 統一轉小寫並清理，確保掃碼比對正確
+                            const rawId = row.id || `imported_${Date.now()}_${index}`;
+                            const uniqueId = rawId.toString().trim().toLowerCase();
                             newData[uniqueId] = {
                                 id: uniqueId,
                                 name: row.name,

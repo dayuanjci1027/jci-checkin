@@ -37,7 +37,7 @@ function doPost(e) {
 function handleGetAll() {
   var ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   var sheet = ss.getSheetByName(CONFIG.ALL_DATA_SHEET_NAME);
-  if (!sheet) return ContentService.createTextOutput(JSON.stringify({status: 'error', msg: 'Sheet all_data not found'})).setMimeType(ContentService.MimeType.JSON);
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({status: 'error', message: 'Sheet all_data not found'})).setMimeType(ContentService.MimeType.JSON);
   
   var values = sheet.getDataRange().getValues();
   var results = [];
@@ -55,7 +55,8 @@ function handleGetAll() {
       photo: r[4] ? r[4].toString() : ""
     });
   }
-  return ContentService.createTextOutput(JSON.stringify(results)).setMimeType(ContentService.MimeType.JSON);
+  // 修正：回傳統一格式 {status, data}
+  return ContentService.createTextOutput(JSON.stringify({status: 'success', data: results})).setMimeType(ContentService.MimeType.JSON);
 }
 
 /** 獲取會內 + 外會預約名單 (合併 Internal 和 外會預約名單) */
