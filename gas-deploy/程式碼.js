@@ -35,56 +35,77 @@ function doPost(e) {
   return ContentService.createTextOutput(JSON.stringify({status: 'ok'})).setMimeType(ContentService.MimeType.JSON);
 }
 
-/** 獲取全體名單 (讀取 All_Data Sheet) - 會內ID去Internal查 */
+/** 獲取全體名單 - 讀取 Internal + 外會預約 + All_Data中的其他 */
 function handleGetAll() {
   var ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-  var sheet = ss.getSheetByName(CONFIG.ALL_DATA_SHEET_NAME);
-  if (!sheet) return ContentService.createTextOutput(JSON.stringify({status: 'error', message: 'Sheet All_Data not found'})).setMimeType(ContentService.MimeType.JSON);
-  
-  // 1. 先讀取 Internal 工作表，建立姓名→ID映射
-  var internalIdMap = {};
-  var internalSheet = ss.getSheetByName(CONFIG.INTERNAL_SHEET_NAME);
-  if (internalSheet) {
-    var internalValues = internalSheet.getDataRange().getValues();
-    for (var j = 1; j < internalValues.length; j++) {
-      var row = internalValues[j];
-      if (row[0] && row[5]) { // 有姓名和ID(F欄)
-        var name = row[0].toString().trim();
-        var id = row[5].toString().trim().toLowerCase();
-        if (id && id.indexOf('#') < 0) {
-          internalIdMap[name] = id;
-        }
-      }
-    }
-  }
-  
-  var values = sheet.getDataRange().getValues();
   var results = [];
   
-  // All_Data 格式：[姓名, 職稱, 分類, ...]
-  for (var i = 1; i < values.length; i++) {
-    var r = values[i];
-    if (!r[0]) continue; // 沒姓名就跳過
-    
-    var name = r[0].toString().trim();
-    var group = r[2] ? r[2].toString().trim() : "Internal";
-    var rawId = "";
-    
-    // 會內人員：去 Internal 查 ID
-    if (group === "Internal") {
-      rawId = internalIdMap[name] || ("u" + (1000 + i));
-    } else {
-      // 外會/長官/其他：用自動生成ID
-      rawId = "ext_" + i;
+  // 1. 讀取 Internal (會內) - 有照片(G欄)和ID(F欄)
+  var internalSheet = ss.getSheetByName(CONFIG.INTERNAL_SHEET_NAME);
+  if (internalSheet) {
+    var iValues = internalSheet.getDataRange().getValues();
+    for (var i = 1; i < iValues.length; i++) {
+      var r = iValues[i];
+      if (!r[0]) continue;
+      var rawId = r[5] ? r[5].toString() : ("int_" + i);
+      // 過濾非法ID
+      if (rawId.indexOf('#N/A') >= 0 || rawId.indexOf('#') >= 0 || rawId.trim() === '') {
+        rawId = "int_" + i;
+      }
+      results.push({
+        id: rawId.trim().toLowerCase(),
+        name: r[0].toString(),
+        title: r[1] ? r[1].toString() : "",
+        group: "Internal",
+        photo: r[6] ? r[6].toString() : ""
+      });
+    }
+  }
+
+  // 2. 讀取 外會預約名單 - 有照片(H欄)
+  var guestSheet = ss.getSheetByName(CONFIG.GUEST_SHEET_NAME);
+  if (guestSheet) {
+    var gValues = guestSheet.getDataRange().getValues();
+    for (var j = 1; j < gValues.length; j++) {
+      var g = gValues[j];
+      if (!g[1]) continue;
+      results.push({
+        id: "guest_" + j,
+        name: g[1].toString(),
+        title: g[2] ? g[2].toString() : "",
+        group: g[4] ? g[4].toString() : "Guest",
+        photo: g[7] ? g[7].toString() : ""
+      });
+    }
+  }
+
+  // 3. 讀取 All_Data 中的 External/Officials/其他（排除Internal和已預約的）
+  var allDataSheet = ss.getSheetByName(CONFIG.ALL_DATA_SHEET_NAME);
+  if (allDataSheet) {
+    var values = allDataSheet.getDataRange().getValues();
+    // 建立已加入的姓名清單（避免重複）
+    var existingNames = {};
+    for (var k = 0; k < results.length; k++) {
+      existingNames[results[k].name] = true;
     }
     
-    results.push({
-      id: rawId.toLowerCase(), 
-      name: name,
-      title: r[1] ? r[1].toString() : "",
-      group: group,
-      photo: r[6] ? r[6].toString() : ""
-    });
+    for (var i = 1; i < values.length; i++) {
+      var r = values[i];
+      if (!r[0]) continue;
+      var name = r[0].toString().trim();
+      var group = r[2] ? r[2].toString().trim() : "Internal";
+      
+      // 跳過 Internal（已處理）和重複的
+      if (group === "Internal" || existingNames[name]) continue;
+      
+      results.push({
+        id: "ext_" + i,
+        name: name,
+        title: r[1] ? r[1].toString() : "",
+        group: group,
+        photo: ""  // All_Data 沒有照片
+      });
+    }
   }
   
   return ContentService.createTextOutput(JSON.stringify({status: 'success', data: results}))
