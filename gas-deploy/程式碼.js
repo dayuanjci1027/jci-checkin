@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * 大園青商 簽到系統 - 自動抓取總表程式 (蝦霸完美修復版 v39)
+ * 大園青商 簽到系統 - 自動抓取總表程式 (Openclaw修復版 v40)
  * ==========================================
  */
 
@@ -89,7 +89,7 @@ function handleGetInternalPlusGuest() {
     return id.trim().toLowerCase();
   }
   
-  // 1. 讀取 Internal (會內) - 格式：[姓名, 職稱, 分類, ID, Photo]
+  // 1. 讀取 Internal (會內) - 格式：[姓名, 職稱, 分類, ?, ?, ID, Photo]
   var internalSheet = ss.getSheetByName(CONFIG.INTERNAL_SHEET_NAME);
   if (internalSheet) {
     var iValues = internalSheet.getDataRange().getValues();
@@ -97,11 +97,11 @@ function handleGetInternalPlusGuest() {
       var r = iValues[i];
       if (!r[0]) continue;
       results.push({
-        id: cleanId(r[3], "int_", i),
+        id: cleanId(r[5], "int_", i),
         name: r[0].toString(),
         title: r[1] ? r[1].toString() : "",
         group: "Internal",
-        photo: r[4] ? r[4].toString() : ""
+        photo: r[6] ? r[6].toString() : ""
       });
     }
   }
