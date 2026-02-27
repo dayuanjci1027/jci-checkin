@@ -25,10 +25,7 @@ function doGet(e) {
       return handleGetAll(); // 全體名單 (all_data)
     }
   }
-  // 修正：加入 CORS Header
-  return ContentService.createTextOutput("大園青商簽到服務運行中")
-    .setMimeType(ContentService.MimeType.TEXT)
-    .setHeaders({'Access-Control-Allow-Origin': '*'});
+  return ContentService.createTextOutput("大園青商簽到服務運行中");
 }
 
 function doPost(e) {
@@ -70,10 +67,9 @@ function handleGetAll() {
       photo: r[4] ? r[4].toString() : ""
     });
   }
-  // 修正：回傳統一格式 {status, data}，並加入 CORS Header
+  // 修正：回傳統一格式 {status, data}
   return ContentService.createTextOutput(JSON.stringify({status: 'success', data: results}))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders({'Access-Control-Allow-Origin': '*'});
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 /** 獲取會內 + 外會預約名單 (合併 Internal 和 外會預約名單) */
@@ -127,10 +123,9 @@ function handleGetInternalPlusGuest() {
     }
   }
 
-  // 修正：回傳統一格式 {status, data}，並加入 CORS Header
+  // 修正：回傳統一格式 {status, data}
   return ContentService.createTextOutput(JSON.stringify({status: 'success', data: results}))
-    .setMimeType(ContentService.MimeType.JSON)
-    .setHeaders({'Access-Control-Allow-Origin': '*'});
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 /** 處理外會來賓預約 (健壯版本 v39) */
