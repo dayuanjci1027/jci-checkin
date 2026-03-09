@@ -312,7 +312,7 @@ function handleRegistration(data) {
        // Email 寄送失敗，不影響回傳成功
     }
 
-    result = { status: 'success', fileId: fileId };
+    result = { status: 'success', fileId: fileId, photoUrl: photoUrl };
 
   } catch (err) {
     result = { status: 'error', message: err.toString() };

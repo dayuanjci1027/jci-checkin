@@ -173,7 +173,8 @@
                     // 這裡的 title 會是掃碼時顯示的內容，建議合併顯示
                     title: (displayUnit ? displayUnit + ' ' : '') + title,
                     arrived: false,
-                    photo: base64Photo, // 直接把 Base64 存進 Firebase 顯示用 (會比較大，但保證即時)
+                    // 不存 base64，避免資料過大造成卡頓；照片以 GAS 備份為主（同步後會帶入短網址）
+                    photo: "",
                     email: email,
                     isGuest: true,
                     group: finalGroup,
