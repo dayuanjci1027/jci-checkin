@@ -11,7 +11,8 @@ const CONFIG = {
   INTERNAL_SHEET_NAME: 'Internal',
   ALL_DATA_SHEET_NAME: 'All_Data',  // 修正：匹配實際工作表名稱（大寫）
   EXTERNAL_SHEET_NAME: 'External',   // 新增：External 工作表
-  OFFICIALS_SHEET_NAME: 'Officials'  // 新增：Officials 工作表
+  OFFICIALS_SHEET_NAME: 'Officials',  // 新增：Officials 工作表
+  FIREBASE_DB_URL: 'https://checkin2025-f0bb9-default-rtdb.asia-southeast1.firebasedatabase.app'
 };
 
 function doGet(e) {
@@ -277,6 +278,23 @@ function handleRegistration(data) {
     } else {
       result = { status: 'duplicate', message: 'already registered', fileId: '' };
       return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 2.5 回寫短照片網址到 Firebase 同一筆 visitor（避免前端存 base64）
+    try {
+      var vid = (data.visitorId || '').toString().trim();
+      var eid = (data.eventId || '').toString().trim();
+      if (vid && eid && photoUrl && photoUrl.indexOf('http') === 0) {
+        var fbUrl = CONFIG.FIREBASE_DB_URL + '/events_data/' + encodeURIComponent(eid) + '/' + encodeURIComponent(vid) + '.json';
+        UrlFetchApp.fetch(fbUrl, {
+          method: 'patch',
+          contentType: 'application/json',
+          payload: JSON.stringify({ photo: photoUrl }),
+          muteHttpExceptions: true
+        });
+      }
+    } catch (fbErr) {
+      // 回寫失敗不影響主流程
     }
     
     // 3. 寄送 Email (獨立 try-catch，失敗不影響結果)

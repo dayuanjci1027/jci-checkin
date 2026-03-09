@@ -128,9 +128,14 @@
 
                 // 蝦霸修正：改用 JSONP 模式或更霸氣的 POST 處理
                 // 因為 no-cors 無法獲取響應，但可以成功觸發
+                // 先產生 visitorId，前後端共用，讓 GAS 可回寫短照片網址到同一筆 Firebase 資料
+                const uniqueId = Date.now().toString().slice(-6);
+                const visitorId = `${name}_${uniqueId}`;
+
                 const payload = {
                     action: 'register',
                     eventId: eventId,
+                    visitorId: visitorId,
                     chapter: displayUnit,
                     title: title,
                     name: name,
@@ -164,9 +169,6 @@
                 }
 
                 // 2. 寫入 Firebase (這才是真正讓現場掃碼能動的關鍵！)
-                // 使用 timestamp 避免同名覆蓋
-                const uniqueId = Date.now().toString().slice(-6);
-                const visitorId = `${name}_${uniqueId}`; 
                 await db.ref('events_data/' + eventId + '/' + visitorId).set({
                     id: visitorId,
                     name: name,
