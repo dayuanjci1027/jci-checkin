@@ -140,8 +140,31 @@
                     photoType: photoFile.type
                 };
 
-                // 1. 先寫入 Firebase (這才是真正讓現場掃碼能動的關鍵！)
-                // 蝦霸修正：使用 timestamp 避免同名覆蓋
+                // 1. 先做重複檢查（同活動 + 同姓名 + 同 email）
+                const existingSnap = await db.ref('events_data/' + eventId)
+                    .orderByChild('email')
+                    .equalTo(email)
+                    .once('value');
+
+                let alreadyExists = false;
+                existingSnap.forEach(child => {
+                    const row = child.val() || {};
+                    if ((row.name || '').trim() === name.trim()) alreadyExists = true;
+                });
+
+                if (alreadyExists) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: '您已預約過',
+                        text: '系統已存在相同姓名與 Email 的預約資料。'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "提交預約";
+                    return;
+                }
+
+                // 2. 寫入 Firebase (這才是真正讓現場掃碼能動的關鍵！)
+                // 使用 timestamp 避免同名覆蓋
                 const uniqueId = Date.now().toString().slice(-6);
                 const visitorId = `${name}_${uniqueId}`; 
                 await db.ref('events_data/' + eventId + '/' + visitorId).set({

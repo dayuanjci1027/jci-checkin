@@ -29,10 +29,27 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  var data = JSON.parse(e.postData.contents);
-  if (data.action === 'register') return handleRegistration(data);
-  if (data.action === 'cleanup') return handleCleanup(data);
-  return ContentService.createTextOutput(JSON.stringify({status: 'ok'})).setMimeType(ContentService.MimeType.JSON);
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'empty payload' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var data = JSON.parse(e.postData.contents || '{}');
+    if (!data || !data.action) {
+      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'missing action' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (data.action === 'register') return handleRegistration(data);
+    if (data.action === 'cleanup') return handleCleanup(data);
+
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', message: 'ignored action' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 /** 獲取全體名單 - 讀取 Internal + 外會預約 + All_Data中的其他 */
@@ -227,18 +244,40 @@ function handleRegistration(data) {
     var qrCodeId = (data.name||"") + "_" + (data.eventId||"");
     var now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
     
-    // 確保所有欄位都有值，避免 undefined
-    guestSheet.appendRow([
-      now, 
-      data.name || "", 
-      data.title || "", 
-      data.chapter || "", 
-      data.group || "", 
-      data.email || "", 
-      qrCodeId, 
-      photoUrl, 
-      data.eventId || ""
-    ]);
+    // 防重複：同活動 + 同姓名 + 同 email 已存在就略過新增
+    var incomingName = (data.name || '').toString().trim();
+    var incomingEmail = (data.email || '').toString().trim().toLowerCase();
+    var incomingEventId = (data.eventId || '').toString().trim();
+
+    var exists = false;
+    var rows = guestSheet.getDataRange().getValues();
+    for (var rr = 1; rr < rows.length; rr++) {
+      var rName = (rows[rr][1] || '').toString().trim();
+      var rEmail = (rows[rr][5] || '').toString().trim().toLowerCase();
+      var rEvent = (rows[rr][8] || '').toString().trim();
+      if (rName === incomingName && rEmail === incomingEmail && rEvent === incomingEventId) {
+        exists = true;
+        break;
+      }
+    }
+
+    if (!exists) {
+      // 確保所有欄位都有值，避免 undefined
+      guestSheet.appendRow([
+        now,
+        data.name || "",
+        data.title || "",
+        data.chapter || "",
+        data.group || "",
+        data.email || "",
+        qrCodeId,
+        photoUrl,
+        data.eventId || ""
+      ]);
+    } else {
+      result = { status: 'duplicate', message: 'already registered', fileId: '' };
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+    }
     
     // 3. 寄送 Email (獨立 try-catch，失敗不影響結果)
     try {
