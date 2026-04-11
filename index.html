@@ -819,9 +819,9 @@
 
         function selectEvent(id, name) {
             // 蝦霸優化：切換前先清空資料與畫面，避免殘影
-            guestsData = {}; 
-            renderReception(); 
-            renderDashboard(); 
+            guestsData = {};
+            renderReception();
+            renderDashboard();
             renderMC();
 
             currentEventId = id;
@@ -831,10 +831,60 @@
                 guestsData = snap.val() || {};
                 renderReception();
                 renderDashboard();
-                renderMC(); 
+                renderMC();
             });
             checkEventStatus();
             goPage('reception');
+
+            // 2026-04-11 auto-merge from cloud: fetch fresh member info on every event entry
+            // and MERGE into Firebase (keeps arrived/timestamp, updates name/title/photo, adds
+            // new members). Fixes: renamed member shows old name / new member "no such person".
+            refreshMembersFromCloud(id, { silent: true });
+        }
+
+        // Auto-merge helper — safe to call anytime, preserves check-in state.
+        function refreshMembersFromCloud(eventId, opts) {
+            opts = opts || {};
+            if (!eventId) return Promise.resolve(0);
+            if (allEvents[eventId] && allEvents[eventId].closed) return Promise.resolve(0);
+            const url = GOOGLE_SCRIPT_URL + `?op=get_all&type=internal&eventId=${eventId}&_t=${Date.now()}`;
+            return fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || data.status === 'error') return 0;
+                    const list = data.data || [];
+                    if (list.length === 0) return 0;
+                    const updates = {};
+                    list.forEach((row, index) => {
+                        const rawId = row.id || `imported_${Date.now()}_${index}`;
+                        const uniqueId = rawId.toString().trim().toLowerCase();
+                        const existing = (guestsData && guestsData[uniqueId]) || null;
+                        updates[`${uniqueId}/id`] = uniqueId;
+                        updates[`${uniqueId}/name`] = row.name;
+                        updates[`${uniqueId}/title`] = row.title;
+                        updates[`${uniqueId}/group`] = row.group;
+                        updates[`${uniqueId}/photo`] = row.photo || '';
+                        if (!existing) {
+                            updates[`${uniqueId}/arrived`] = false;
+                            updates[`${uniqueId}/timestamp`] = 0;
+                            updates[`${uniqueId}/originalIndex`] = index;
+                        }
+                    });
+                    return db.ref(`events_data/${eventId}`).update(updates).then(() => list.length);
+                })
+                .then(count => {
+                    if (!opts.silent && count > 0) {
+                        Swal.fire('已更新', `名單已從雲端同步 ${count} 筆`, 'success');
+                    }
+                    return count;
+                })
+                .catch(err => {
+                    console.error('[refreshMembersFromCloud]', err);
+                    if (!opts.silent) {
+                        Swal.fire('同步失敗', '請檢查網路或 GAS 權限: ' + err.message, 'error');
+                    }
+                    return 0;
+                });
         }
 
         // --- V6.5 KIOSK 雙模邏輯 ---
