@@ -329,6 +329,12 @@
                 <button id="kiosk-camera-btn" onclick="startKioskCamera()">
                     📷 點開鏡頭掃描
                 </button>
+
+                <button id="kiosk-refresh-btn" type="button" onclick="manualRefreshMembers()"
+                        style="margin-top: 14px; background: transparent; color: #888; border: 1px solid #ccc;
+                               padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">
+                    🔄 重新整理名單
+                </button>
             </div>
 
             <div id="kiosk-scanner-container">
@@ -840,6 +846,16 @@
             // and MERGE into Firebase (keeps arrived/timestamp, updates name/title/photo, adds
             // new members). Fixes: renamed member shows old name / new member "no such person".
             refreshMembersFromCloud(id, { silent: true });
+        }
+
+        // 2026-04-11 dispatch 70: manual re-sync button handler (called from the kiosk page).
+        // Shows a toast on success/failure so staff knows it worked.
+        function manualRefreshMembers() {
+            if (!currentEventId) {
+                return Swal.fire('尚未選擇活動', '請先從活動大廳進入一個活動', 'warning');
+            }
+            Swal.fire({ title: '重新整理中...', didOpen: () => Swal.showLoading() });
+            refreshMembersFromCloud(currentEventId, { silent: false });
         }
 
         // Auto-merge helper — safe to call anytime, preserves check-in state.
