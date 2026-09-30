@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JCI 報到系統 V2.0</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root { 
+            --jci-blue: #0097D7; 
+            --jci-dark: #005780;
+            --accent: #FFC107; 
+            --bg-gradient: linear-gradient(135deg, #0097D7 0%, #005780 100%);
+            --mc-bg: #fff8e1;
+        }
+        
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; margin: 0; background: #f0f2f5; 
+            height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;
+        }
+
+        /* 系統鎖定遮罩 */
+        #system-lock-screen {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 1); z-index: 9999;
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        .lock-card {
+            background: white; padding: 40px; border-radius: 20px; text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15); max-width: 350px; width: 90%;
+        }
+        .lock-icon { font-size: 4rem; color: var(--jci-dark); margin-bottom: 20px; }
+
+        /* 導航列 */
+        #nav-bar { 
+            background: rgba(255, 255, 255, 0.98); 
+            padding: 8px 15px; display: flex; justify-content: flex-start; align-items: center; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05); z-index: 999; 
+            position: sticky; top: 0; height: auto; min-height: 60px; gap: 10px;
+        }
+        
+        .event-badge { 
+            background: #333; color: white; padding: 8px 15px; border-radius: 20px; 
+            font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 5px; 
+            z-index: 1001; flex: 0 1 auto; width: fit-content; 
+            white-space: normal; word-break: break-word; line-height: 1.3; text-align: left; max-width: 50%; 
+        }
+        
+        .dev-signature {
+            font-size: 0.8rem; color: #005780; font-weight: bold;
+            background: #e1f5fe; padding: 4px 10px; border-radius: 20px;
+            border: 1px solid #b3e5fc; white-space: nowrap;
+            display: flex; align-items: center; gap: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-left: auto; margin-right: 10px; flex-shrink: 0; 
+        }
+        
+        .nav-group { display: flex; gap: 5px; }
+        .nav-item { cursor: pointer; color: #666; font-weight: 500; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; transition: all 0.3s ease; white-space: nowrap; }
+        .nav-item.active { background: var(--jci-blue); color: white; box-shadow: 0 2px 10px rgba(0,151,215,0.3); }
+        
+        .mobile-menu-btn { display: none; font-size: 1.8rem; cursor: pointer; color: var(--jci-dark); z-index: 1001; user-select: none; flex-shrink: 0; }
+        
+        .mobile-dropdown {
+            display: none; position: absolute; top: 100%; left: 0; width: 100%;
+            background: white; flex-direction: column; box-shadow: 0 10px 20px rgba(0,0,0,0.1); border-bottom: 1px solid #eee; animation: slideDown 0.3s ease;
+        }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 900px) {
+            .nav-group { display: none; }
+            .mobile-menu-btn { display: block; }
+            .mobile-dropdown.show { display: flex; }
+            .nav-item { border-radius: 0; padding: 15px; text-align: center; border-bottom: 1px solid #f5f5f5; font-size: 1.1rem; }
+            .nav-item:last-child { border-bottom: none; }
+            .nav-item.active { background: #e3f2fd; color: var(--jci-blue); box-shadow: none; }
+            .event-badge { max-width: 60%; font-size: 0.85rem; padding: 6px 12px; }
+            .dev-signature { flex-direction: column; align-items: flex-end; justify-content: center; font-size: 0.65rem; line-height: 1.1; padding: 0; background: transparent; border: none; box-shadow: none; margin-left: auto; margin-right: 5px; }
+            .dev-signature span { display: block; text-align: right; }
+        }
+
+        .page { display: none; flex: 1; overflow-y: auto; padding: 20px; animation: fadeIn 0.4s ease-out; }
+        /* V6.6 修正：Kiosk 頁面移除 padding 以便 Banner 滿版 */
+        #page-kiosk.page { padding: 0; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .styled-input { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 12px; font-size: 1rem; margin-bottom: 15px; box-sizing: border-box; text-align: center; }
+        .btn-gradient { width: 100%; padding: 14px; background: var(--bg-gradient); color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: 0.3s; margin-top: 5px; box-shadow: 0 5px 15px rgba(0,151,215,0.3); }
+        .btn-gradient:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,151,215,0.4); }
+
+        .event-card { background: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #eee; gap: 15px; }
+        .event-card.active { background: #e3f2fd; border-color: var(--jci-blue); }
+        .event-card.closed { background: #fff5f5; border-color: #ffcdd2; }
+        .event-info { flex: 1; min-width: 0; text-align: left; }
+        .event-btn { flex-shrink: 0; white-space: nowrap; background: var(--jci-blue); color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; font-weight: bold; }
+
+        .guest-item { background: white; padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .guest-item.arrived { background: #f9f9f9; }
+        .guest-photo-small { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #eee; margin-right: 12px; }
+        .manual-tag { font-size: 0.75rem; color: #856404; background-color: #fff3cd; padding: 2px 6px; border-radius: 4px; border: 1px solid #ffeeba; margin-left: 5px; white-space: nowrap; font-weight: bold; }
+
+        #dashboard-grid { display: flex; flex-wrap: wrap; gap: 20px; padding: 10px; justify-content: center; }
+        .vip-card { background: white; padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 260px; flex-grow: 1; max-width: 320px; border: 4px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .avatar { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin-bottom: 15px; border: 5px solid #f0f2f5; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .vip-card.new-arrival { border-color: #ff3d00; background: #fff9c4; box-shadow: 0 0 40px rgba(255, 61, 0, 0.6); animation: distinctFlash 1.5s infinite alternate; transform: scale(1.05); z-index: 10; }
+        @keyframes distinctFlash { 0% { border-color: #ff3d00; } 100% { border-color: #FFC107; } }
+
+        /* 回到頂端按鈕 */
+        #btn-back-to-top {
+            display: none; position: fixed; bottom: 160px; right: 30px; width: 50px; height: 50px;
+            background: rgba(0, 0, 0, 0.5); color: white; border-radius: 50%;
+            align-items: center; justify-content: center; font-size: 1.5rem;
+            cursor: pointer; z-index: 199; transition: 0.3s;
+        }
+        #btn-back-to-top:hover { background: rgba(0, 0, 0, 0.8); }
+
+        /* 回到底部按鈕 */
+        #btn-scroll-to-bottom {
+            display: none; position: fixed; bottom: 100px; right: 30px; width: 50px; height: 50px;
+            background: rgba(0, 0, 0, 0.5); color: white; border-radius: 50%;
+            align-items: center; justify-content: center; font-size: 1.5rem;
+            cursor: pointer; z-index: 199; transition: 0.3s;
+        }
+        #btn-scroll-to-bottom:hover { background: rgba(0, 0, 0, 0.8); }
+
+        .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--jci-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 4px 20px rgba(0,151,215,0.4); cursor: pointer; z-index: 200; }
+        #site-qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        #site-qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; }
+
+        /* KIOSK 樣式 */
+        
+        /* V6.6: 全新 BANNER 樣式 */
+        .kiosk-main-banner {
+            width: 100%;
+            background: linear-gradient(135deg, #0097D7 0%, #005780 100%);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            border-radius: 0 0 40px 40px; /* 下方圓角 */
+        }
+        .banner-title { font-size: 3rem; font-weight: bold; letter-spacing: 5px; margin-bottom: 5px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .banner-sub { font-size: 1.2rem; opacity: 0.9; letter-spacing: 2px; }
+
+        .kiosk-waiting-box {
+            background: white; padding: 40px 20px; border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1); text-align: center;
+            width: 90%; max-width: 500px;
+            display: flex; flex-direction: column; align-items: center;
+            border: 4px solid var(--jci-blue);
+        }
+        
+        /* 掃碼圖示 SVG 樣式 */
+        .pulse-ring {
+            width: 160px; height: 160px; border-radius: 50%;
+            background: #e3f2fd; display: flex; align-items: center; justify-content: center;
+            margin-bottom: 30px; animation: pulse-ring 2s infinite;
+        }
+        .scan-svg-icon { width: 80px; height: 80px; fill: var(--jci-blue); }
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(0, 151, 215, 0.4); } 70% { box-shadow: 0 0 0 30px rgba(0, 151, 215, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 151, 215, 0); } }
+
+        /* 掃碼盒輸入框 (Kiosk用) */
+        #kiosk-input {
+            width: 90%; padding: 15px; font-size: 1.3rem; text-align: center;
+            border: 2px solid #ddd; border-radius: 12px; background: #f9f9f9;
+            margin-bottom: 20px; ime-mode: disabled;
+        }
+        #kiosk-input:focus {
+            border-color: #00C853; background: #fff; box-shadow: 0 0 15px rgba(0,200,83,0.3);
+            outline: none;
+        }
+
+        #kiosk-camera-btn { 
+            width: 100%; padding: 15px; border-radius: 12px; font-size: 1.1rem; 
+            background: #fff; color: #666; border: 2px solid #eee; 
+            font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; 
+        }
+        #kiosk-camera-btn:hover { background: #eee; color: #333; }
+
+        #kiosk-scanner-container { display: none; width: 100%; max-width: 500px; background: black; border-radius: 25px; overflow: hidden; margin: 20px auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        #kiosk-success-view { display: none; text-align: center; }
+        .countdown-bar { height: 6px; background: #eee; width: 100%; margin-top: 25px; border-radius: 10px; overflow: hidden; }
+        .countdown-fill { height: 100%; background: #28a745; width: 100%; transition: width 3s linear; }
+
+        /* 掃碼盒藍牙配對按鈕 (右下角) */
+        .bt-pair-btn {
+            position: fixed; bottom: 20px; right: 20px;
+            background: #607d8b; color: white;
+            padding: 10px 20px; border-radius: 30px;
+            font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: pointer; z-index: 1000; font-size: 0.9rem;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .bt-pair-btn:hover { background: #546e7a; transform: translateY(-2px); }
+
+        .settings-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+        .settings-action-btn { border: none; padding: 12px; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; font-size: 0.95rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .settings-action-btn:active { transform: scale(0.98); }
+
+        #reception-scan-result { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.98); z-index: 99999; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .result-content { max-width: 400px; width: 90%; }
+        .status-success { color: #28a745; }
+        .status-warning { color: #ffc107; }
+
+        /* MC Page Styles */
+        .mc-layout { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; }
+        .mc-column { flex: 1; min-width: 300px; background: white; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); overflow: hidden; }
+        .mc-header { background: #005780; color: white; font-weight: bold; padding: 15px; font-size: 1.3rem; text-align: center; border-bottom: 3px solid #FFC107; letter-spacing: 1px; }
+        .mc-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; font-size: 1.1rem; white-space: nowrap; overflow: hidden; }
+        .mc-item:nth-child(even) { background: #fafafa; }
+        .mc-time { font-size: 0.9rem; color: #666; background: #eee; padding: 4px 8px; border-radius: 6px; margin-right: 12px; font-weight: bold; min-width: 50px; text-align: center;}
+        .mc-name { font-weight: bold; font-size: 1.5rem; margin-right: 10px; color: #333; flex-shrink: 0; }
+        .mc-title { color: var(--jci-blue); font-weight: bold; font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; }
+        
+        @media (max-width: 600px) {
+            .mc-name { font-size: 1.3rem; }
+            .mc-title { font-size: 1rem; }
+            .mc-item { padding: 12px; }
+        }
+
+        /* 活動結束橫幅 */
+        #event-closed-banner {
+            display: none;
+            background: #d32f2f; color: white; text-align: center; padding: 10px;
+            font-weight: bold; font-size: 1.1rem; position: sticky; 
+            top: 0; z-index: 998;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="system-lock-screen">
+        <div class="lock-card">
+            <div class="lock-icon">🔒</div>
+            <h2 style="margin: 0 0 10px 0;">系統已鎖定</h2>
+            <p style="color:#666; margin-bottom:20px;">請輸入管理員密碼以進入</p>
+            <input type="password" id="lock-password" class="styled-input" placeholder="密碼">
+            <button class="btn-gradient" onclick="unlockSystem()">登入系統</button>
+        </div>
+    </div>
+
+    <div id="reception-scan-result">
+        <div class="result-content">
+            <div id="scan-icon" style="font-size: 5rem; line-height: 1;">✔</div>
+            <h2 id="scan-status-text" style="margin:10px 0 0 0; font-size:2rem;">報到成功</h2>
+            <img id="scan-photo" class="avatar" style="width:150px; height:150px; margin-top:25px;" src="" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'">
+            <h1 id="scan-name" style="color:var(--jci-blue); margin:15px 0 5px 0; font-size:2.5rem;"></h1>
+            <div id="scan-title" style="color:#666; font-size:1.5rem;"></div>
+            <div class="countdown-bar"><div id="scan-countdown-fill" class="countdown-fill"></div></div>
+            <p style="color:#999; margin-top:12px;">3 秒後自動返回...</p>
+        </div>
+    </div>
+
+    <div id="nav-bar">
+        <div class="event-badge" onclick="goPage('home')" id="current-event-display">
+            <span>🏠</span> 尚未選擇活動
+        </div>
+        
+        <div class="dev-signature">
+            <span>🏆 2023會長</span>
+            <span>林振暉 製作</span>
+        </div>
+
+        <div class="mobile-menu-btn" onclick="toggleMenu()">☰</div>
+        <div class="nav-group">
+            <div class="nav-item" onclick="goPage('kiosk')">自助報到</div>
+            <div class="nav-item" onclick="goPage('reception')">輸入端</div>
+            <div class="nav-item" onclick="goPage('dashboard')">輸出端</div>
+            <div class="nav-item" onclick="goPage('mc')">會長、主席進場序</div>
+        </div>
+        <div class="mobile-dropdown" id="mobile-nav">
+            <div style="padding:15px; text-align:center; color:#999; font-size:0.8rem; border-bottom:1px solid #eee;">JCI Check-in System V2.0</div>
+            <div class="nav-item" onclick="goPage('kiosk')">自助報到</div>
+
+            <div class="nav-item" onclick="goPage('reception')">輸入端</div>
+            <div class="nav-item" onclick="goPage('dashboard')">輸出端</div>
+            <div class="nav-item" onclick="goPage('mc')">會長、主席進場序</div>
+        </div>
+    </div>
+
+    <div id="event-closed-banner">🛑 活動已結束 (報到關閉 / 唯讀模式)</div>
+
+    <div id="page-home" class="page active">
+        <h2 style="color:#333; text-align: center;">📅 活動列表</h2>
+        <div id="event-list" style="max-width: 600px; margin: 0 auto;">載入中...</div>
+        <div class="fab" onclick="createNewEvent()">+</div>
+    </div>
+
+    <div id="page-kiosk" class="page">
+        <div class="bt-pair-btn" onclick="showPairingQR()">
+            <span>📶</span> 掃碼盒藍牙連線
+        </div>
+
+        <div style="display:flex; flex-direction:column; align-items:center; min-height:80vh;">
+            
+            <div class="kiosk-main-banner">
+                <div class="banner-title">JCI 自助報到</div>
+                <div class="banner-sub">歡迎蒞臨．請出示 QR Code</div>
+            </div>
+
+            <div id="kiosk-standby" class="kiosk-waiting-box" onclick="document.getElementById('kiosk-input').focus()">
+                <div class="pulse-ring">
+                    <svg class="scan-svg-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 5v4h2V5h4V3H5c-1.1 0-2 .9-2 2zm2 10H3v4c0 1.1.9 2 2 2h4v-2H5v-4zm14 4h-4v2h4c1.1 0 2-.9 2-2v-4h-2v4zm0-16h-4v2h4v4h2V5c0-1.1-.9-2-2-2zm-6 8h-2v4h2v-4zm4 0h-2v4h2v-4zm-8 0H7v4h2v-4z"/>
+                    </svg>
+                </div>
+                <div class="kiosk-instruction">📡 掃碼盒待命中</div>
+                
+                <input type="url" id="kiosk-input" inputmode="latin" 
+                       placeholder="點此啟用 (請切換英文輸入)" 
+                       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" autofocus>
+                
+                <div class="kiosk-sub-instruction" style="font-size:0.9rem; color:#d32f2f;">⚠️ 如出現注音，請切換 iPad 輸入法</div>
+                
+                <div style="margin: 20px 0; color:#999;">- 或 -</div>
+                
+                <button id="kiosk-camera-btn" onclick="startKioskCamera()">
+                    📷 點開鏡頭掃描
+                </button>
+
+                <button id="kiosk-refresh-btn" type="button" onclick="manualRefreshMembers()"
+                        style="margin-top: 14px; background: transparent; color: #888; border: 1px solid #ccc;
+                               padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; cursor: pointer;">
+                    🔄 重新整理名單
+                </button>
+            </div>
+
+            <div id="kiosk-scanner-container">
+                <div style="color:white; padding:20px; text-align:center; font-size: 1.2rem; background: rgba(0,0,0,0.5);">請出示您的 QR Code</div>
+                <div id="kiosk-reader" style="width:100%;"></div>
+                <button onclick="stopKiosk()" style="width:100%; padding:20px; background:#444; color:white; border:none; cursor:pointer; font-size:1.2rem; font-weight: bold;">返回 / 取消</button>
+            </div>
+
+            <div id="kiosk-success-view" class="login-card" style="width:100%; max-width: 450px;">
+                <div id="kiosk-icon" style="color:#28a745; font-size:6rem; line-height: 1;">✔</div>
+                <h2 id="kiosk-status" style="margin:10px 0 0 0; font-size:2.2rem; color: #28a745;">報到成功</h2>
+                <img id="kiosk-photo" class="avatar" style="width:160px; height:160px; margin-top:25px;" src="" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'">
+                <h1 id="kiosk-name" style="color:var(--jci-blue); margin:15px 0 5px 0; font-size:2.8rem;"></h1>
+                <div id="kiosk-title" style="color:#666; font-size:1.6rem;"></div>
+                <div class="countdown-bar"><div id="countdown-fill" class="countdown-fill"></div></div>
+                <p style="color:#999; margin-top:12px; font-size: 1rem;">3 秒後自動返回...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-reception" class="page">
+        <h2 style="margin-bottom:20px; text-align: center;">輸入端 (櫃台)</h2>
+        
+        <div id="btn-back-to-top" onclick="scrollToTop()">▲</div>
+        <div id="btn-scroll-to-bottom" onclick="scrollToBottom()">▼</div>
+        
+        <button id="btn-cam" class="btn-gradient" style="background:linear-gradient(45deg, #ff5722, #ff9800); margin-bottom:20px; font-size: 1.2rem;" onclick="toggleCamera()">📷 掃描 QR (後鏡頭)</button>
+        
+        <div style="background:white; padding:15px; border-radius:10px; margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; border:1px solid #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <button onclick="addNewGuest()" style="background:var(--jci-blue); color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; font-size: 1rem;">➕ 新增來賓</button>
+            <button onclick="adminSettings()" style="background:#607d8b; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; font-size: 1rem;">⚙️ 系統設定</button>
+        </div>
+
+        <div id="scanner-view" style="display:none; background:black; padding:10px; border-radius:20px; margin-bottom:20px; overflow:hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);"><div id="reader" style="width:100%"></div></div>
+        <div style="position:relative; margin-bottom:15px;"><input type="text" id="search-box" placeholder="🔍 搜尋姓名 或 職稱..." class="styled-input" style="margin-bottom: 0; font-size: 1.1rem;" onkeyup="renderReception()"></div>
+        <div id="reception-list"></div>
+    </div>
+
+    <div id="page-mc" class="page" style="background-color: var(--mc-bg);">
+        <h2 style="color:var(--jci-dark); margin:0 0 20px 0; text-align: center; padding-bottom: 10px;">🎤 會長、主席進場序</h2>
+        
+        <div class="mc-layout">
+            <div class="mc-column">
+                <div class="mc-header">👑 歷屆會長進場序 (新➜舊)</div>
+                <div id="mc-list-presidents"></div>
+            </div>
+            <div class="mc-column">
+                <div class="mc-header">🎩 歷屆主席進場序 (新➜舊)</div>
+                <div id="mc-list-chairmen"></div>
+            </div>
+        </div>
+
+        <div id="mc-empty" style="text-align:center; color:#999; margin-top:50px; display:none; font-size: 1.5rem;">目前無會長/主席進場</div>
+    </div>
+
+    <div id="page-dashboard" class="page" style="background-color: #222; min-height: 100vh;">
+        <h2 style="color:white; margin:0 0 30px 0; text-align: center; font-size: 2.5rem; letter-spacing: 2px;">貴賓蒞臨牆</h2>
+        <div id="empty-msg" style="color:#666; text-align:center; margin-top:20%; font-size:1.8rem; display:none; font-weight: bold;">等待貴賓蒞臨...</div>
+        <div id="dashboard-grid"></div>
+    </div>
+
+    <div id="page-mc" class="page" style="background-color: var(--mc-bg);">
+        <h2 style="color:var(--jci-dark); margin:0 0 20px 0; text-align: center; padding-bottom: 10px;">🎤 會長、主席進場序</h2>
+        <div class="mc-layout">
+            <div class="mc-column">
+                <div class="mc-header">👑 歷屆會長進場序 (新➜舊)</div>
+                <div id="mc-list-presidents"></div>
+            </div>
+            <div class="mc-column">
+                <div class="mc-header">🎩 歷屆主席進場序 (新➜舊)</div>
+                <div id="mc-list-chairmen"></div>
+            </div>
+        </div>
+        <div id="mc-empty" style="text-align:center; color:#999; margin-top:50px; display:none; font-size: 1.5rem;">目前無會長/主席進場</div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLq7SrkQaCnjtsFArh0leKPJRbPFZTZnk",
+            authDomain: "checkin2025-f0bb9.firebaseapp.com",
+            databaseURL: "https://checkin2025-f0bb9-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "checkin2025-f0bb9",
+            storageBucket: "checkin2025-f0bb9.firebasestorage.app",
+            messagingSenderId: "526526638146",
+            appId: "1:526526638146:web:c69e758e8b3c1d5990e5db",
+            measurementId: "G-SDY39SN348"
+        };
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwc3AMCW6g_ATgAdht4dIMMTsmNTdHK8K44kmHLUxs7_J7st0xVT90XxeQcc7rK-BfhRw/exec";
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        // 2026-09-30 安全修補：秘書處改用正式登入（通行碼由 02 總表選單產生），資料庫只准登入後讀寫。
+        const SECRETARY_EMAIL = 'secretary@checkin2025-f0bb9.firebaseapp.com';
+        let fbIdToken = '';
+        async function freshIdToken() {
+            const u = firebase.auth().currentUser;
+            fbIdToken = u ? await u.getIdToken() : '';
+            return fbIdToken;
+        }
+        setInterval(() => { freshIdToken().catch(() => {}); }, 40 * 60 * 1000);  // 登入憑證 1 小時過期，提前換
+        const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/847/847969.png";
+        
+        function getPhotoUrl(url) {
+            if (!url) return defaultAvatar;
+            return url + (url.indexOf('?') > -1 ? '&' : '?') + 't=' + new Date().getTime();
+        }
+
+        let currentEventId = null;
+        let guestsData = {};
+        let allEvents = {};
+        let html5QrCode = null; 
+        let kioskQrCode = null; 
+        let kioskTimeout = null; 
+        let isScanning = false;
+        let isScanningProcessing = false;
+        let systemSettings = { locked: false, password: '123', checkin_closed: false };
+        let kioskScanBuffer = "";
+        let kioskBufferTimeout = null;
+
+        let appStarted = false;
+        function startApp() {
+            if (appStarted) return;
+            appStarted = true;
+            db.ref('settings').on('value', snap => {
+                if(snap.val()) {
+                    systemSettings = snap.val();
+                }
+            });
+
+            // V4.9: 監聽活動變動
+            db.ref('events_meta').on('value', snap => {
+                allEvents = snap.val() || {};
+                renderEventList();
+                checkEventStatus(); 
+            });
+        }
+
+        // 登入狀態：未登入就顯示鎖定畫面；登入後（這台裝置會記住）才開始讀資料
+        firebase.auth().onAuthStateChanged(async user => {
+            if (user) {
+                await freshIdToken();
+                document.getElementById('system-lock-screen').style.display = 'none';
+                startApp();
+            } else {
+                document.getElementById('system-lock-screen').style.display = 'flex';
+            }
+        });
+
+        function checkSystemLock() {
+            document.getElementById('system-lock-screen').style.display = firebase.auth().currentUser ? 'none' : 'flex';
+        }
+
+        function checkEventStatus() {
+            const banner = document.getElementById('event-closed-banner');
+            if (currentEventId && allEvents[currentEventId] && allEvents[currentEventId].closed) {
+                banner.style.display = 'block';
+                const navHeight = document.getElementById('nav-bar').offsetHeight;
+                banner.style.position = 'sticky';
+                banner.style.top = navHeight + 'px';
+
+                if (isScanning) stopCamera();
+                if (kioskQrCode) stopKiosk();
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+
+        function unlockSystem() {
+            const inputPwd = document.getElementById('lock-password').value.trim();
+            firebase.auth().signInWithEmailAndPassword(SECRETARY_EMAIL, inputPwd).then(() => {
+                document.getElementById('lock-password').value = '';
+                Swal.fire({ icon: 'success', title: '登入成功', timer: 1000, showConfirmButton: false });
+            }).catch(() => {
+                Swal.fire('錯誤', '通行碼不正確（通行碼在 02 總表選單「產生新的秘書處通行碼」）', 'error');
+            });
+        }
+
+        function adminSettings() {
+            let isCurrentEventClosed = false;
+            if (currentEventId && allEvents[currentEventId] && allEvents[currentEventId].closed) {
+                isCurrentEventClosed = true;
+            }
+
+            Swal.fire({
+                title: '⚙️ 系統設定',
+                html: `
+                    <div style="text-align:left; margin-bottom:10px;">全站鎖定: ${systemSettings.locked ? '<span style="color:red;font-weight:bold;">🔒 鎖定</span>' : '<span style="color:green;font-weight:bold;">🔓 公開</span>'}</div>
+                    <button id="toggle-lock-btn" class="btn-gradient" style="background:${systemSettings.locked?'#4caf50':'#f44336'}; margin-bottom:15px; padding:10px;">
+                        ${systemSettings.locked ? '🔓 解除全站鎖定' : '🔒 啟用全站鎖定'}
+                    </button>
+                    
+                    <hr>
+                    
+                    <button id="btn-edit-meta" class="btn-gradient" style="background:#607d8b; margin-bottom:15px; padding:10px; ${!currentEventId ? 'display:none;' : ''}">
+                        ✏️ 修改活動資訊 (名稱/日期/主席)
+                    </button>
+
+                    <button id="btn-copy-invite" class="btn-gradient" style="background:var(--jci-blue); margin-bottom:15px; padding:10px; ${!currentEventId ? 'display:none;' : ''}">
+                        🔗 複製外會來賓預約連結
+                    </button>
+
+                    <div style="text-align:left; margin-bottom:10px;">
+                        目前活動 (${allEvents[currentEventId] ? allEvents[currentEventId].name : '未選擇'}): 
+                        ${isCurrentEventClosed ? '<span style="color:red;font-weight:bold;">🛑 已結束</span>' : '<span style="color:green;font-weight:bold;">🟢 進行中</span>'}
+                    </div>
+                    <button id="toggle-close-btn" class="btn-gradient" style="background:${isCurrentEventClosed?'#2196f3':'#d32f2f'}; margin-bottom:15px; padding:10px; ${!currentEventId ? 'display:none;' : ''}">
+                        ${isCurrentEventClosed ? '🟢 重啟此活動 (允許報到)' : '🛑 結束此活動 (關閉報到)'}
+                    </button>
+
+                    <hr>
+                    <h3 style="font-size:1rem; color:#666; margin:15px 0 10px; text-align:left;">📦 資料管理</h3>
+                    <div class="settings-btn-grid">
+                        <button id="btn-sync" class="settings-action-btn" style="background:#007bff;">☁️ 同步名單</button>
+                        <button id="btn-export" class="settings-action-btn" style="background:#28a745;">📥 匯出紀錄</button>
+                        <button id="btn-clear" class="settings-action-btn" style="background:#ff9800;">⚠️ 清空名單</button>
+                        <button id="btn-del-evt" class="settings-action-btn" style="background:#d32f2f;">🗑️ 刪除活動</button>
+                        <button id="btn-changelog" class="settings-action-btn" style="background:#9e9e9e;">📜 開發日誌</button>
+                    </div>
+                    <hr>
+                    <div style="text-align:left; margin-bottom:5px; color:#666;">秘書處通行碼：請到 02 總表上方選單「產生新的秘書處通行碼」更換。</div>
+                    <button id="btn-signout" class="settings-action-btn" style="background:#9e9e9e;">🚪 這台裝置登出</button>
+                `,
+                showCancelButton: true,
+                confirmButtonText: '儲存變更',
+                didOpen: () => {
+                    document.getElementById('toggle-lock-btn').onclick = () => {
+                        const newStatus = !systemSettings.locked;
+                        db.ref('settings/locked').set(newStatus);
+                        Swal.close();
+                        Swal.fire('成功', newStatus ? '系統已上鎖' : '系統已公開', 'success');
+                    };
+                    
+                    if(document.getElementById('btn-edit-meta')) {
+                        document.getElementById('btn-edit-meta').onclick = () => {
+                            if(!currentEventId) return;
+                            const evt = allEvents[currentEventId];
+                            Swal.fire({
+                                title: '修改活動資訊',
+                                html: `
+                                    <input id="edit-name" class="swal2-input" placeholder="活動名稱" value="${evt.name}">
+                                    <input id="edit-date" type="date" class="swal2-input" style="margin-top:10px;" value="${evt.eventDate || ''}">
+                                    <input id="edit-chair" class="swal2-input" placeholder="主席姓名" style="margin-top:10px;" value="${evt.chairman || ''}">
+                                `,
+                                showCancelButton: true,
+                                confirmButtonText: '更新',
+                                preConfirm: () => {
+                                    return {
+                                        name: document.getElementById('edit-name').value,
+                                        date: document.getElementById('edit-date').value,
+                                        chair: document.getElementById('edit-chair').value
+                                    };
+                                }
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    db.ref('events_meta/' + currentEventId).update({
+                                        name: result.value.name,
+                                        eventDate: result.value.date,
+                                        chairman: result.value.chair
+                                    });
+                                    Swal.fire('成功', '活動資訊已更新', 'success');
+                                }
+                            });
+                        };
+                    }
+
+                    if(document.getElementById('btn-copy-invite')) {
+                        document.getElementById('btn-copy-invite').onclick = () => {
+                            if(!currentEventId) return;
+                            const baseUrl = window.location.href.split('index.html')[0];
+                            const inviteUrl = `${baseUrl}invite.html?event=${currentEventId}`;
+                            
+                            // 複製到剪貼簿
+                            const el = document.createElement('textarea');
+                            el.value = inviteUrl;
+                            document.body.appendChild(el);
+                            el.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(el);
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: '連結已複製',
+                                text: inviteUrl,
+                                footer: '<span style="color:var(--jci-blue)">快傳給外會來賓預約吧！</span>'
+                            });
+                        };
+                    }
+
+                    if(document.getElementById('toggle-close-btn')) {
+                        document.getElementById('toggle-close-btn').onclick = () => {
+                            if (!currentEventId) return;
+                            const newStatus = !isCurrentEventClosed;
+                            
+                            // 蝦霸新增：如果活動關閉，連動刪除 Google Drive 上的照片
+                            if(newStatus === true) {
+                                Swal.fire({
+                                    title: '確定結束活動？',
+                                    text: "結束後將自動刪除所有來賓上傳的照片以保護隱私！",
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonText: '確定結束',
+                                    cancelButtonText: '取消'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        db.ref(`events_meta/${currentEventId}`).update({ closed: true });
+                                        // 呼叫 GAS Cleanup API
+                                        fetch(GOOGLE_SCRIPT_URL, {
+                                            method: 'POST',
+                                            mode: 'no-cors',
+                                            body: JSON.stringify({ action: 'cleanup', eventId: currentEventId, idToken: fbIdToken })
+                                        });
+                                        Swal.fire('活動已結束', '來賓照片已同步從雲端刪除', 'success');
+                                    }
+                                });
+                            } else {
+                                db.ref(`events_meta/${currentEventId}`).update({ closed: false });
+                                Swal.fire('活動已重啟', '', 'success');
+                            }
+                        };
+                    }
+
+                    document.getElementById('btn-sync').onclick = () => { Swal.close(); syncFromCloud(); };
+                    document.getElementById('btn-export').onclick = () => { exportCSV(); };
+                    document.getElementById('btn-clear').onclick = () => { Swal.close(); clearGuestList(); };
+                    document.getElementById('btn-del-evt').onclick = () => { Swal.close(); deleteEvent(); };
+                    document.getElementById('btn-changelog').onclick = () => { Swal.close(); showChangelog(); };
+                    document.getElementById('btn-signout').onclick = () => { Swal.close(); firebase.auth().signOut(); };
+                }
+            });
+        }
+
+        db.ref('events_meta').on('value', snap => { allEvents = snap.val() || {}; renderEventList(); });
+
+        function toggleMenu() { document.getElementById('mobile-nav').classList.toggle('show'); }
+
+        function goPage(p) {
+            if (!currentEventId && p !== 'home') return Swal.fire("請先在活動大廳選擇一個活動");
+            document.getElementById('mobile-nav').classList.remove('show');
+            document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
+            document.getElementById('page-' + p).classList.add('active');
+            document.querySelectorAll('.nav-group .nav-item').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('#mobile-nav .nav-item').forEach(e => e.classList.remove('active'));
+
+            // 蝦霸修正：切換頁面時重置回到頂端按鈕
+            document.getElementById('btn-back-to-top').style.display = 'none';
+
+            const navMap = {'kiosk':0, 'reception':1, 'dashboard':2, 'mc':3};
+            if(navMap[p] !== undefined) {
+                const desktopItems = document.querySelectorAll('.nav-group .nav-item');
+                if(desktopItems[navMap[p]]) desktopItems[navMap[p]].classList.add('active');
+                
+                const mobileItems = document.querySelectorAll('#mobile-nav .nav-item');
+                if(mobileItems[navMap[p]]) mobileItems[navMap[p]].classList.add('active');
+            }
+            if(p !== 'reception') stopCamera(); 
+            if(p !== 'kiosk') stopKiosk();
+            
+            // V6.6: Kiosk 頁面自動 focus
+            if(p === 'kiosk') {
+                setTimeout(() => { 
+                    const input = document.getElementById('kiosk-input');
+                    if(input) input.focus(); 
+                }, 500);
+            }
+            
+            if(p === 'mc') renderMC();
+
+            checkSystemLock();
+        }
+
+        // 蝦霸新增：回到頂端邏輯 (通用版)
+        function scrollToTop() {
+            const activePage = document.querySelector('.page.active');
+            if(activePage) activePage.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 蝦霸新增：回到底部邏輯 (通用版)
+        function scrollToBottom() {
+            const activePage = document.querySelector('.page.active');
+            if(activePage) activePage.scrollTo({ top: activePage.scrollHeight, behavior: 'smooth' });
+        }
+
+        // 監聽滾動顯示按鈕 (針對所有頁面)
+        document.querySelectorAll('.page').forEach(page => {
+            page.addEventListener('scroll', function() {
+                // 只在當前活動頁面顯示按鈕
+                if(!this.classList.contains('active')) return;
+
+                const btnTop = document.getElementById('btn-back-to-top');
+                const btnBottom = document.getElementById('btn-scroll-to-bottom');
+                
+                // 顯示/隱藏回到頂端
+                if (this.scrollTop > 300) {
+                    btnTop.style.display = 'flex';
+                } else {
+                    btnTop.style.display = 'none';
+                }
+
+                // 顯示/隱藏回到底部
+                // 判斷是否到底部：scrollHeight - scrollTop - clientHeight < 閾值
+                if (this.scrollHeight - this.scrollTop - this.clientHeight < 100) {
+                     btnBottom.style.display = 'none';
+                } else {
+                     // 只有當內容長度超過視窗高度時才顯示
+                     if(this.scrollHeight > this.clientHeight) {
+                        btnBottom.style.display = 'flex';
+                     } else {
+                        btnBottom.style.display = 'none';
+                     }
+                }
+            });
+        });
+
+        function showChangelog() {
+            Swal.fire({
+                title: '開發日誌',
+                html: `
+                    <div style="text-align:left; max-height: 300px; overflow-y: auto;">
+                        <h4 style="margin: 0 0 5px 0; color:var(--jci-blue);">V2.0 (進行中)</h4>
+                        <ul style="margin: 0 0 15px 0; padding-left: 20px; color:#666; font-size:0.9rem;">
+                            <li>(待更新...)</li>
+                        </ul>
+                        <h4 style="margin: 0 0 5px 0; color:var(--jci-blue);">V1.0</h4>
+                        <ul style="margin: 0 0 15px 0; padding-left: 20px; color:#666; font-size:0.9rem;">
+                            <li>開發 QR Code 簽到系統</li>
+                            <li>加入讀取 Google Sheet 功能</li>
+                            <li>整合會員卡 QR Code，一掃描即簽到</li>
+                            <li>會長、主席進場序 (自動依屆數/年份排序)</li>
+                            <li>貴賓報到牆 (即時顯示已到貴賓)</li>
+                        </ul>
+                    </div>
+                `,
+                confirmButtonText: '關閉'
+            });
+            // toggleMenu(); // 關閉手機選單 (已移至設定內，不再需要關閉漢堡選單)
+        }
+
+        function createNewEvent() {
+            Swal.fire({ 
+                title: '建立新活動', 
+                html: `
+                    <div style="margin-bottom:10px;">請輸入活動資訊</div>
+                    <input id="swal-evt-name" class="swal2-input" placeholder="活動名稱 (必填)">
+                    <input id="swal-evt-date" type="date" class="swal2-input" style="margin-top:10px;">
+                    <input id="swal-evt-chair" class="swal2-input" placeholder="主席姓名 (選填)" style="margin-top:10px;">
+                `, 
+                showCancelButton: true,
+                preConfirm: () => {
+                    const name = document.getElementById('swal-evt-name').value;
+                    const date = document.getElementById('swal-evt-date').value;
+                    const chair = document.getElementById('swal-evt-chair').value;
+                    if(!name) return Swal.showValidationMessage('請輸入活動名稱');
+                    return { name: name, date: date, chair: chair };
+                }
+            }).then((r) => {
+                if (r.isConfirmed && r.value) {
+                    const id = 'evt_' + Date.now();
+                    db.ref('events_meta/' + id).set({ 
+                        id: id, 
+                        name: r.value.name, 
+                        eventDate: r.value.date, 
+                        chairman: r.value.chair, 
+                        created: Date.now(), 
+                        closed: false 
+                    });
+                    selectEvent(id, r.value.name);
+                }
+            });
+        }
+
+        function renderEventList() {
+            const list = document.getElementById('event-list');
+            list.innerHTML = '';
+            Object.values(allEvents).sort((a,b)=>b.created-a.created).forEach(evt => {
+                const div = document.createElement('div');
+                const isClosed = evt.closed ? true : false;
+                div.className = `event-card ${evt.id === currentEventId ? 'active' : ''} ${isClosed ? 'closed' : ''}`;
+                
+                const displayDate = evt.eventDate ? evt.eventDate : "(未設定日期)";
+                const displayChair = evt.chairman ? evt.chairman : "(未設定)";
+                const createdStr = new Date(evt.created).toLocaleDateString();
+
+                div.innerHTML = `
+                    <div class="event-info">
+                        <div style="font-weight:bold; font-size: 1.2rem; margin-bottom: 5px; line-height:1.2;">
+                            ${isClosed ? '🔒 ' : ''}${evt.name}
+                        </div>
+                        <div style="font-size:0.95rem; color:#555; margin-bottom: 5px;">
+                            📅 ${displayDate}  |  👤 主席：${displayChair}
+                        </div>
+                        <div style="font-size:0.8rem; color:#999;">
+                            建檔：${createdStr}
+                            ${isClosed ? '<span style="color:red; font-weight:bold; margin-left:5px;">(已結束)</span>' : ''}
+                        </div>
+                    </div>
+                    <button class="event-btn" onclick="selectEvent('${evt.id}','${evt.name}')">進入活動</button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function selectEvent(id, name) {
+            // 蝦霸優化：切換前先清空資料與畫面，避免殘影
+            guestsData = {};
+            renderReception();
+            renderDashboard();
+            renderMC();
+
+            currentEventId = id;
+            document.getElementById('current-event-display').innerHTML = `<span>📅</span> ${name}`;
+            db.ref(`events_data/${id}`).off();
+            db.ref(`events_data/${id}`).on('value', snap => {
+                guestsData = snap.val() || {};
+                renderReception();
+                renderDashboard();
+                renderMC();
+            });
+            checkEventStatus();
+            goPage('reception');
+
+            // 2026-04-11 auto-merge from cloud: fetch fresh member info on every event entry
+            // and MERGE into Firebase (keeps arrived/timestamp, updates name/title/photo, adds
+            // new members). Fixes: renamed member shows old name / new member "no such person".
+            refreshMembersFromCloud(id, { silent: true });
+        }
+
+        // 2026-04-11 dispatch 70: manual re-sync button handler (called from the kiosk page).
+        // Shows a toast on success/failure so staff knows it worked.
+        function manualRefreshMembers() {
+            if (!currentEventId) {
+                return Swal.fire('尚未選擇活動', '請先從活動大廳進入一個活動', 'warning');
+            }
+            Swal.fire({ title: '重新整理中...', didOpen: () => Swal.showLoading() });
+            refreshMembersFromCloud(currentEventId, { silent: false });
+        }
+
+        // Auto-merge helper — safe to call anytime, preserves check-in state.
+        function refreshMembersFromCloud(eventId, opts) {
+            opts = opts || {};
+            if (!eventId) return Promise.resolve(0);
+            if (allEvents[eventId] && allEvents[eventId].closed) return Promise.resolve(0);
+            const url = GOOGLE_SCRIPT_URL + `?op=get_all&type=internal&eventId=${eventId}&idToken=${encodeURIComponent(fbIdToken)}&_t=${Date.now()}`;
+            return fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || data.status === 'error') return 0;
+                    const list = data.data || [];
+                    if (list.length === 0) return 0;
+                    const updates = {};
+                    list.forEach((row, index) => {
+                        const rawId = row.id || `imported_${Date.now()}_${index}`;
+                        const uniqueId = rawId.toString().trim().toLowerCase();
+                        const existing = (guestsData && guestsData[uniqueId]) || null;
+                        updates[`${uniqueId}/id`] = uniqueId;
+                        updates[`${uniqueId}/name`] = row.name;
+                        updates[`${uniqueId}/title`] = row.title;
+                        updates[`${uniqueId}/group`] = row.group;
+                        updates[`${uniqueId}/photo`] = row.photo || '';
+                        if (!existing) {
+                            updates[`${uniqueId}/arrived`] = false;
+                            updates[`${uniqueId}/timestamp`] = 0;
+                            updates[`${uniqueId}/originalIndex`] = index;
+                        }
+                    });
+                    return db.ref(`events_data/${eventId}`).update(updates).then(() => list.length);
+                })
+                .then(count => {
+                    if (!opts.silent && count > 0) {
+                        Swal.fire('已更新', `名單已從雲端同步 ${count} 筆`, 'success');
+                    }
+                    return count;
+                })
+                .catch(err => {
+                    console.error('[refreshMembersFromCloud]', err);
+                    if (!opts.silent) {
+                        Swal.fire('同步失敗', '請檢查網路或 GAS 權限: ' + err.message, 'error');
+                    }
+                    return 0;
+                });
+        }
+
+        // --- V6.5 KIOSK 雙模邏輯 ---
+
+        // V6.5: 顯示配對 QR Code
+        function showPairingQR() {
+            Swal.fire({
+                title: '請拿給掃碼盒掃碼並連線藍牙',
+                imageUrl: 'pair.jpg', // ★★★ 關鍵：請務必上傳這張圖片 ★★★
+                imageWidth: 200,
+                imageAlt: 'Bluetooth Pairing Code',
+                confirmButtonText: '關閉',
+                footer: '<span style="color:#666; font-size:0.8rem;">(若圖片未顯示，請確認是否已上傳 pair.jpg)</span>'
+            });
+        }
+
+        function startKioskCamera() {
+            if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "自助報到已關閉", "warning");
+
+            document.getElementById('kiosk-standby').style.display = 'none';
+            document.getElementById('kiosk-success-view').style.display = 'none';
+            document.getElementById('kiosk-scanner-container').style.display = 'block';
+            kioskQrCode = new Html5Qrcode("kiosk-reader");
+            kioskQrCode.start({ facingMode: "user" }, { fps: 10, qrbox: { width: 300, height: 300 } }, onKioskScanSuccess)
+            .catch(err => { console.error(err); Swal.fire("無法啟動前鏡頭", "請確認權限或使用 HTTPS", "error"); stopKiosk(); });
+
+            clearTimeout(kioskTimeout);
+            kioskTimeout = setTimeout(stopKiosk, 15000); 
+        }
+
+        function stopKiosk() {
+            if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
+            document.getElementById('kiosk-scanner-container').style.display = 'none';
+            document.getElementById('kiosk-standby').style.display = 'flex'; // 回到待機畫面
+            document.getElementById('kiosk-success-view').style.display = 'none';
+            
+            // 重新把焦點放回輸入框，方便下一位用掃碼盒
+            setTimeout(() => { document.getElementById('kiosk-input').focus(); }, 100);
+            
+            clearTimeout(kioskTimeout); 
+        }
+
+        function onKioskScanSuccess(uid) {
+            handleKioskInput(uid); 
+        }
+
+        // V6.4: Kiosk 頁面的輸入監聽
+        document.addEventListener('keypress', function (e) {
+            // 如果現在是在 Kiosk 頁面
+            if(document.getElementById('page-kiosk').classList.contains('active')) {
+                // 如果相機正在開著，就不監聽 (避免衝突)
+                if(document.getElementById('kiosk-scanner-container').style.display === 'block') return;
+
+                const input = document.getElementById('kiosk-input');
+                // 確保焦點在輸入框
+                if(document.activeElement !== input) input.focus();
+
+                if (e.key === 'Enter') {
+                    const code = input.value.trim();
+                    if(code) {
+                        // V6.4: 檢查是否包含中文
+                        if (/[\u3105-\u3129\u02CA\u02C7\u02CB\u02D9]/.test(code)) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: '輸入錯誤',
+                                text: '偵測到注音符號！請將 iPad 輸入法切換為「English (US)」',
+                                timer: 3000
+                            });
+                            input.value = '';
+                            return;
+                        }
+                        handleKioskInput(code);
+                        input.value = '';
+                    }
+                }
+            }
+        });
+
+        // V6.4: Kiosk 統一處理邏輯
+        function handleKioskInput(uid) {
+            clearTimeout(kioskTimeout); 
+            if(kioskQrCode) { kioskQrCode.stop().then(()=>{ kioskQrCode.clear(); kioskQrCode = null; }); }
+            
+            // 蝦霸優化：無論成功失敗，這裡先清空輸入框，避免殘留
+            const inputEl = document.getElementById('kiosk-input');
+            if(inputEl) inputEl.value = '';
+
+            // 修正：清理掃碼內容（去除空格、轉小寫）
+            uid = uid.trim().toLowerCase();
+
+            // V6.4: 檢查注音
+            if (/[\u3105-\u3129\u02CA\u02C7\u02CB\u02D9]/.test(uid)) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: '輸入錯誤',
+                    text: '偵測到注音符號！請將 iPad 輸入法切換為「English (US)」',
+                    timer: 3000
+                });
+                return;
+            }
+
+            document.getElementById('kiosk-scanner-container').style.display = 'none';
+            document.getElementById('kiosk-standby').style.display = 'none'; 
+
+            if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "報到無效", "error").then(() => stopKiosk());
+
+            // 修正：使用清理後的 ID 進行比對（同時也檢查原始大小寫）
+            let guest = guestsData[uid];
+            if (!guest) {
+                // 如果找不到，嘗試找原始大小寫版本
+                const allIds = Object.keys(guestsData);
+                const matchedId = allIds.find(id => id.toLowerCase() === uid);
+                if (matchedId) guest = guestsData[matchedId];
+            }
+            
+            if(guest) {
+                const isDuplicate = guest.arrived;
+                // 使用正確的 ID 進行簽到
+                const guestId = Object.keys(guestsData).find(id => guestsData[id] === guest) || uid;
+                if(!isDuplicate) checkIn(guestId, true);
+
+                document.getElementById('kiosk-success-view').style.display = 'block';
+                document.getElementById('kiosk-photo').src = getPhotoUrl(guest.photo);
+                document.getElementById('kiosk-name').innerText = guest.name;
+                document.getElementById('kiosk-title').innerText = guest.title;
+
+                const statusText = document.getElementById('kiosk-status');
+                const statusIcon = document.getElementById('kiosk-icon');
+                if (isDuplicate) {
+                    statusText.innerText = "已重複報到";
+                    statusText.style.color = "#ffc107"; 
+                    statusIcon.innerText = "⚠";
+                    statusIcon.style.color = "#ffc107";
+                } else {
+                    statusText.innerText = "報到成功";
+                    statusText.style.color = "#28a745"; 
+                    statusIcon.innerText = "✔";
+                    statusIcon.style.color = "#28a745";
+                }
+
+                const fill = document.getElementById('countdown-fill');
+                fill.style.transition = 'none'; fill.style.width = '100%';
+                setTimeout(() => { fill.style.transition = 'width 3s linear'; fill.style.width = '0%'; }, 100);
+                setTimeout(() => { stopKiosk(); }, 3000);
+            } else { 
+                Swal.fire({ icon: 'error', title: '掃描失敗', text: '此 QR Code 不在名單中: ' + uid, timer: 2000, showConfirmButton: false })
+                .then(() => stopKiosk()); 
+            }
+        }
+
+        // --- RECEPTION 相關邏輯 ---
+
+        function toggleCamera() { isScanning ? stopCamera() : startCamera(); }
+        
+        function startCamera() {
+            if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "掃描功能已關閉", "warning");
+
+            document.getElementById('scanner-view').style.display = 'block';
+            document.getElementById('btn-cam').innerText = "❌ 關閉相機";
+            document.getElementById('btn-cam').style.background = "#333";
+            isScanningProcessing = false;
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (rawUid)=>{
+                if(isScanningProcessing) return; 
+                isScanningProcessing = true;
+                
+                // 修正：清理掃碼內容
+                const uid = rawUid.trim().toLowerCase();
+                
+                if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "操作無效", "error").then(() => { isScanningProcessing = false; stopCamera(); });
+
+                // 修正：支援大小寫不敏感的 ID 比對
+                let guest = guestsData[uid];
+                let actualId = uid;
+                if (!guest) {
+                    const allIds = Object.keys(guestsData);
+                    const matchedId = allIds.find(id => id.toLowerCase() === uid);
+                    if (matchedId) {
+                        guest = guestsData[matchedId];
+                        actualId = matchedId;
+                    }
+                }
+
+                if(guest) {
+                    const isDuplicate = guest.arrived;
+                    if(!isDuplicate) { checkIn(actualId, true); }
+                    showReceptionResult(guest, isDuplicate);
+                    setTimeout(() => { closeReceptionResult(); isScanningProcessing = false; }, 3000);
+                } else {
+                    Swal.fire({ icon: 'error', title: '錯誤', text: '非本場名單', timer: 1500, showConfirmButton: false }).then(() => { isScanningProcessing = false; });
+                }
+            });
+            isScanning = true;
+        }
+
+        function showReceptionResult(g, isDuplicate) {
+            const overlay = document.getElementById('reception-scan-result');
+            const icon = document.getElementById('scan-icon');
+            const title = document.getElementById('scan-status-text');
+            const fill = document.getElementById('scan-countdown-fill');
+            document.getElementById('scan-photo').src = getPhotoUrl(g.photo);
+            document.getElementById('scan-name').innerText = g.name;
+            document.getElementById('scan-title').innerText = g.title;
+            if(isDuplicate) { icon.innerText = "!"; icon.className = "status-warning"; title.innerText = "已重複報到"; title.className = "status-warning"; } 
+            else { icon.innerText = "✔"; icon.className = "status-success"; title.innerText = "報到成功"; title.className = "status-success"; }
+            overlay.style.display = 'flex';
+            fill.style.transition = 'none'; fill.style.width = '100%';
+            setTimeout(() => { fill.style.transition = 'width 3s linear'; fill.style.width = '0%'; }, 50);
+        }
+
+        function closeReceptionResult() { document.getElementById('reception-scan-result').style.display = 'none'; }
+
+        function stopCamera() {
+            if(html5QrCode) { html5QrCode.stop().then(()=>{ html5QrCode.clear(); html5QrCode = null; }); }
+            document.getElementById('scanner-view').style.display = 'none';
+            document.getElementById('btn-cam').innerText = "📷 掃描 QR (後鏡頭)";
+            document.getElementById('btn-cam').style.background = "linear-gradient(45deg, #ff5722, #ff9800)";
+            document.getElementById('reception-scan-result').style.display = 'none';
+            isScanning = false;
+        }
+
+        function renderReception() {
+            const list = document.getElementById('reception-list');
+            const search = document.getElementById('search-box').value.toUpperCase();
+            list.innerHTML = '';
+            
+            const isEventClosed = (allEvents[currentEventId] && allEvents[currentEventId].closed);
+
+            Object.values(guestsData).sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0)).forEach(g => {
+                if(search && g.name.indexOf(search) === -1 && (g.title || "").indexOf(search) === -1) return;
+                
+                const isManual = !String(g.id).startsWith('u');
+                const manualTag = isManual ? '<span class="manual-tag">⚠️ 需人工</span>' : '';
+
+                let btnText = "";
+                let btnStyle = "";
+
+                if (isEventClosed) {
+                    // 活動關閉時的檢視模式
+                    if (g.arrived) {
+                        btnText = "已到";
+                        btnStyle = "background:#28a745; cursor:not-allowed;"; // 綠色表示已出席
+                    } else {
+                        btnText = "未到";
+                        btnStyle = "background:#ccc; color:#666; cursor:not-allowed;"; // 灰色表示缺席
+                    }
+                } else {
+                    // 活動進行中的操作模式
+                    btnText = g.arrived ? '取消' : '簽到';
+                    btnStyle = g.arrived ? "background:#ccc; color:#333;" : "background:var(--jci-blue);";
+                }
+                
+                const delStyle = isEventClosed 
+                    ? "background:#eee; color:#aaa; cursor:not-allowed;" 
+                    : "background:#ffebee; color:#c62828;";
+
+                const d = document.createElement('div');
+                d.className = `guest-item ${g.arrived ? 'arrived' : ''}`;
+                d.innerHTML = `<div style="display:flex; align-items:center;"><img src="${getPhotoUrl(g.photo)}" class="guest-photo-small" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'"><div><div style="font-weight:bold; font-size:1.1rem;">${g.name}${manualTag}</div><div style="font-size:0.8rem;color:#666">${g.title} | ${g.group}</div></div></div>
+                <div style="display:flex; gap:5px;">
+                    <button onclick="checkIn('${g.id}',${!g.arrived})" style="padding:6px 15px;border:none;border-radius:20px;cursor:pointer;color:white;font-weight:bold;${btnStyle}">${btnText}</button>
+                    <button onclick="deleteGuest('${g.id}')" style="padding:6px 10px;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;${delStyle}">🗑️</button>
+                </div>`;
+                list.appendChild(d);
+            });
+        }
+
+        function deleteGuest(uid) {
+            if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "資料已鎖定，無法刪除", "warning");
+
+            Swal.fire({ title: '確定刪除?', text: "刪除後無法復原", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6', confirmButtonText: '刪除', cancelButtonText: '取消' }).then((result) => {
+                if (result.isConfirmed) { db.ref(`events_data/${currentEventId}/${uid}`).remove(); Swal.fire('已刪除', '', 'success'); }
+            })
+        }
+
+        function checkIn(id, status) {
+            if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "無法變更簽到狀態", "warning");
+
+            db.ref(`events_data/${currentEventId}/${id}`).update({ arrived: status, timestamp: status ? firebase.database.ServerValue.TIMESTAMP : 0, acked: status ? false : null });
+        }
+
+        function renderDashboard() {
+            const grid = document.getElementById('dashboard-grid');
+            const emptyMsg = document.getElementById('empty-msg');
+            grid.innerHTML = '';
+            let list = Object.values(guestsData).filter(g => {
+                if (!g.arrived) return false;
+                
+                // 蝦霸修正：只要職稱包含「會長」兩個字就上牆，但要排除「副會長」
+                const title = g.title || "";
+                if (title.indexOf('會長') > -1 && title.indexOf('副會長') === -1) {
+                    return true;
+                }
+                
+                return false;
+            });
+            if (list.length === 0) { emptyMsg.style.display = 'block'; return; } else { emptyMsg.style.display = 'none'; }
+            list.sort((a, b) => {
+                const scoreA = (!a.acked) ? 2 : 1; const scoreB = (!b.acked) ? 2 : 1;
+                if (scoreA !== scoreB) return scoreB - scoreA; return (b.timestamp || 0) - (a.timestamp || 0);
+            });
+            list.forEach(g => {
+                const d = document.createElement('div');
+                let cardClass = 'vip-card'; if (!g.acked) cardClass += ' new-arrival';
+                d.className = cardClass; d.onclick = function() { ackGuest(g.id); }; d.style.cursor = "pointer";
+                d.innerHTML = `<img src="${getPhotoUrl(g.photo)}" class="avatar" onerror="this.src='https://cdn-icons-png.flaticon.com/512/847/847969.png'"><div style="font-weight:bold;margin-bottom:5px; font-size:2.5rem; line-height:1.2;">${g.name}</div><div style="font-size:1.5rem;color:#666;">${g.title}</div>`;
+                grid.appendChild(d);
+            });
+        }
+
+        // MC 頁面渲染邏輯 (V3.5 復刻版：權重排序)
+        function renderMC() {
+            const listP = document.getElementById('mc-list-presidents');
+            const listC = document.getElementById('mc-list-chairmen');
+            const emptyMsg = document.getElementById('mc-empty');
+            
+            if(!listP || !listC) return;
+
+            listP.innerHTML = '';
+            listC.innerHTML = '';
+            
+            // 只抓已報到的
+            let allArrived = Object.values(guestsData).filter(g => g.arrived);
+
+            // ★★★ V3.5 復刻關鍵：屆數優先邏輯 ★★★
+            function parseWeight(title) {
+                if(!title) return 0;
+                if(title.indexOf("創會長") > -1) return 1; // 創會長最小 (最後)
+                
+                // 1. 先抓屆數 (例如 "35屆" -> 35)
+                const termMatch = title.match(/(\d+)\s*屆/);
+                if(termMatch) return parseInt(termMatch[1]); // 直接回傳 35
+                
+                // 2. 沒抓到屆數，才抓年份，並自動換算 (例如 2023 -> 33)
+                // 這裡假設 1990 是基底，依實際屆數調整
+                const yearMatch = title.match(/20\d{2}/);
+                if(yearMatch) return parseInt(yearMatch[0]) - 1989; // 修正：1990年是創會? 假設 2023=34屆，2023-1989=34
+                // 若不知基底，暫用 1990
+                
+                return 0;
+            }
+
+            // 排序：數字大的排前面 (Desc)
+            const sortFn = (a, b) => parseWeight(b.title) - parseWeight(a.title);
+
+            // 分組過濾 (依舊版邏輯 + 排除 External/Officials)
+            // 條件：
+            // 1. 職稱含"會長"/"主席"
+            // 2. 職稱含"屆"或"年"或"創會" (或是4位數年份)
+            // 3. 排除 External (友會) 和 Officials (長官)
+            
+            const presidents = allArrived.filter(g => {
+                const t = g.title || "";
+                const grp = (g.group || "").trim().toLowerCase();
+                const isNotOutsider = grp !== 'external' && grp !== 'officials' && grp !== 'official'; // 多防一個 official 單數
+                const hasYear = (t.indexOf("屆") > -1 || t.indexOf("年") > -1 || /\d{4}/.test(t) || t.indexOf("創會") > -1);
+                
+                return t.indexOf("會長") > -1 && hasYear && isNotOutsider;
+            }).sort(sortFn);
+
+            const chairmen = allArrived.filter(g => {
+                const t = g.title || "";
+                const grp = (g.group || "").trim().toLowerCase();
+                const isNotOutsider = grp !== 'external' && grp !== 'officials' && grp !== 'official';
+                const hasYear = (t.indexOf("屆") > -1 || t.indexOf("年") > -1 || /\d{4}/.test(t));
+                
+                return t.indexOf("主席") > -1 && hasYear && isNotOutsider;
+            }).sort(sortFn);
+
+            if(presidents.length === 0 && chairmen.length === 0) {
+                if(emptyMsg) emptyMsg.style.display = 'block';
+                if(document.querySelector('.mc-layout')) document.querySelector('.mc-layout').style.display = 'none';
+            } else {
+                if(emptyMsg) emptyMsg.style.display = 'none';
+                if(document.querySelector('.mc-layout')) document.querySelector('.mc-layout').style.display = 'flex';
+            }
+
+            function addItem(g, container) {
+                const div = document.createElement('div'); 
+                div.className = 'mc-item';
+                let timeStr = ""; 
+                if(g.timestamp) timeStr = new Date(g.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                div.innerHTML = `<div class="mc-time">${timeStr}</div><div class="mc-name">${g.name}</div><div class="mc-title">${g.title}</div>`;
+                container.appendChild(div);
+            }
+
+            presidents.forEach(g => addItem(g, listP));
+            chairmen.forEach(g => addItem(g, listC));
+        }
+        function ackGuest(id) { db.ref(`events_data/${currentEventId}/${id}`).update({ acked: true }); }
+        
+        function addNewGuest() {
+            if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "無法新增來賓", "warning");
+
+            Swal.fire({
+                title: '新增現場來賓', html: `<div id="swal-form-grid"><input id="swal-name" class="swal-large-input" placeholder="姓名"><input id="swal-title" class="swal-large-input" placeholder="職稱"><select id="swal-group" class="swal-large-input"><option value="External">友會貴賓</option><option value="Official">長官</option><option value="Internal">本會會員</option></select></div>`,
+                customClass: { popup: 'swal-wide-popup' }, showCancelButton: true, confirmButtonText: '新增',
+                preConfirm: () => {
+                    const name = document.getElementById('swal-name').value;
+                    if (!name) Swal.showValidationMessage('請輸入姓名');
+                    return { name: name, title: document.getElementById('swal-title').value, group: document.getElementById('swal-group').value };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const newId = "walkin_" + Date.now();
+                    db.ref(`events_data/${currentEventId}/${newId}`).set({ id: newId, name: result.value.name, title: result.value.title || '貴賓', group: result.value.group, photo: "", arrived: true, timestamp: firebase.database.ServerValue.TIMESTAMP, acked: false, originalIndex: 999999 });
+                }
+            });
+        }
+
+        function clearGuestList() {
+            if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "資料已鎖定", "warning");
+
+            if(!confirm("確定清空所有名單？活動將保留，但簽到資料會消失。")) return;
+            db.ref(`events_data/${currentEventId}`).remove().then(() => Swal.fire("已清空", "名單已重置", "success"));
+        }
+
+        function syncFromCloud() {
+            if (allEvents[currentEventId] && allEvents[currentEventId].closed) return Swal.fire("活動已結束", "資料已鎖定，無法同步", "warning");
+
+            Swal.fire({
+                title: '請選擇同步來源', text: "這將會覆蓋目前的初始名單", icon: 'question', showCancelButton: true, confirmButtonText: '僅會內會員 (Internal)', confirmButtonColor: '#0097D7', showDenyButton: true, denyButtonText: '全體名單 (All Data)', denyButtonColor: '#28a745', cancelButtonText: '取消'
+            }).then((result) => {
+                if (result.isDismissed) return; 
+                const onlyInternal = result.isConfirmed; 
+                Swal.fire({ title: '同步中...', didOpen: () => Swal.showLoading() });
+                
+                const typeParam = onlyInternal ? 'internal' : 'all'; 
+                const eventIdParam = onlyInternal ? `&eventId=${currentEventId}` : '';
+                
+                // 蝦霸備註：這裡使用 JSONP 或者是直接 CORS (GAS 若有設定 Access-Control-Allow-Origin: *)
+                // 如果遇到 CORS 錯誤，請確認 GAS 腳本的 doGet 回傳是否正確設置 Header
+                fetch(GOOGLE_SCRIPT_URL + `?op=get_all&type=${typeParam}${eventIdParam}&idToken=${encodeURIComponent(fbIdToken)}&_t=${new Date().getTime()}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if(data.status === 'error') return Swal.fire("錯誤", data.message || "未知錯誤", "error");
+
+                        const newData = {};
+                        let count = 0;
+                        // 修正：檢查 data.data 是否存在 (因為 GAS 回傳格式是 {status, data: []})
+                        const list = data.data || []; 
+                        
+                        list.forEach((row, index) => {
+                            // 修正：ID 統一轉小寫並清理，確保掃碼比對正確
+                            const rawId = row.id || `imported_${Date.now()}_${index}`;
+                            const uniqueId = rawId.toString().trim().toLowerCase();
+                            newData[uniqueId] = {
+                                id: uniqueId,
+                                name: row.name,
+                                title: row.title,
+                                group: row.group,
+                                photo: row.photo || "",
+                                arrived: false,
+                                timestamp: 0,
+                                originalIndex: index
+                            };
+                            count++;
+                        });
+                        
+                        if(count === 0) return Swal.fire("注意", "雲端沒有資料，或格式不正確", "warning");
+
+                        db.ref(`events_data/${currentEventId}`).set(newData).then(() => {
+                            Swal.close();
+                            Swal.fire("同步成功", `已成功匯入 ${count} 筆資料`, "success");
+                        });
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        Swal.fire("同步失敗", "請檢查網路或 GAS 權限: " + err.message, "error");
+                    });
+            });
+        }
+
+        function exportCSV() {
+            let eventName = "簽到表"; if (currentEventId && allEvents[currentEventId]) eventName = allEvents[currentEventId].name;
+            const clean = (text) => String(text || "").replace(/,/g, ' ').replace(/\n/g, ' ').trim();
+            let csv = "\uFEFF姓名,職稱,分類,簽到狀態,報到時間\n";
+            Object.values(guestsData).sort((a, b) => (a.originalIndex || 0) - (b.originalIndex || 0)).forEach(g => {
+                let statusStr = "", timeStr = "";
+                if (g.arrived) { statusStr = "已到"; if (g.timestamp) { let d = new Date(g.timestamp); const pad = (n) => (n < 10 ? '0' + n : n); timeStr = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; } }
+                csv += `${clean(g.name)},${clean(g.title)},${clean(g.group)},${statusStr},${timeStr}\n`;
+            });
+            const l = document.createElement("a"); l.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'})); l.download = eventName + ".csv"; l.click();
+        }
+        function deleteEvent() {
+            if(!currentEventId || !confirm("確定刪除此活動？")) return;
+            db.ref(`events_meta/${currentEventId}`).remove(); db.ref(`events_data/${currentEventId}`).remove();
+            currentEventId = null; document.getElementById('current-event-display').innerHTML = "<span>🏠</span> 尚未選擇活動"; goPage('home');
+        }
+    </script>
+</body>
+</html>
