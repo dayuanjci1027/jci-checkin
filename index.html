@@ -9,6 +9,7 @@
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -425,6 +426,15 @@
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwc3AMCW6g_ATgAdht4dIMMTsmNTdHK8K44kmHLUxs7_J7st0xVT90XxeQcc7rK-BfhRw/exec";
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        // 2026-09-30 安全修補：秘書處改用正式登入（通行碼由 02 總表選單產生），資料庫只准登入後讀寫。
+        const SECRETARY_EMAIL = 'secretary@checkin2025-f0bb9.firebaseapp.com';
+        let fbIdToken = '';
+        async function freshIdToken() {
+            const u = firebase.auth().currentUser;
+            fbIdToken = u ? await u.getIdToken() : '';
+            return fbIdToken;
+        }
+        setInterval(() => { freshIdToken().catch(() => {}); }, 40 * 60 * 1000);  // 登入憑證 1 小時過期，提前換
         const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/847/847969.png";
         
         function getPhotoUrl(url) {
@@ -444,28 +454,37 @@
         let kioskScanBuffer = "";
         let kioskBufferTimeout = null;
 
-        db.ref('settings').on('value', snap => {
-            if(snap.val()) {
-                systemSettings = snap.val();
-                checkSystemLock();
-            } else {
-                db.ref('settings').set({ locked: true, password: '1234', checkin_closed: false });
-            }
-        });
+        let appStarted = false;
+        function startApp() {
+            if (appStarted) return;
+            appStarted = true;
+            db.ref('settings').on('value', snap => {
+                if(snap.val()) {
+                    systemSettings = snap.val();
+                }
+            });
 
-        // V4.9: 監聽活動變動
-        db.ref('events_meta').on('value', snap => {
-            allEvents = snap.val() || {};
-            renderEventList();
-            checkEventStatus(); 
+            // V4.9: 監聽活動變動
+            db.ref('events_meta').on('value', snap => {
+                allEvents = snap.val() || {};
+                renderEventList();
+                checkEventStatus(); 
+            });
+        }
+
+        // 登入狀態：未登入就顯示鎖定畫面；登入後（這台裝置會記住）才開始讀資料
+        firebase.auth().onAuthStateChanged(async user => {
+            if (user) {
+                await freshIdToken();
+                document.getElementById('system-lock-screen').style.display = 'none';
+                startApp();
+            } else {
+                document.getElementById('system-lock-screen').style.display = 'flex';
+            }
         });
 
         function checkSystemLock() {
-            if (!systemSettings.locked || sessionStorage.getItem('system_unlocked')) {
-                document.getElementById('system-lock-screen').style.display = 'none';
-                return;
-            }
-            document.getElementById('system-lock-screen').style.display = 'flex';
+            document.getElementById('system-lock-screen').style.display = firebase.auth().currentUser ? 'none' : 'flex';
         }
 
         function checkEventStatus() {
@@ -484,14 +503,13 @@
         }
 
         function unlockSystem() {
-            const inputPwd = document.getElementById('lock-password').value;
-            if (inputPwd === systemSettings.password) {
-                sessionStorage.setItem('system_unlocked', 'true');
-                document.getElementById('system-lock-screen').style.display = 'none';
+            const inputPwd = document.getElementById('lock-password').value.trim();
+            firebase.auth().signInWithEmailAndPassword(SECRETARY_EMAIL, inputPwd).then(() => {
+                document.getElementById('lock-password').value = '';
                 Swal.fire({ icon: 'success', title: '登入成功', timer: 1000, showConfirmButton: false });
-            } else {
-                Swal.fire('錯誤', '密碼不正確', 'error');
-            }
+            }).catch(() => {
+                Swal.fire('錯誤', '通行碼不正確（通行碼在 02 總表選單「產生新的秘書處通行碼」）', 'error');
+            });
         }
 
         function adminSettings() {
@@ -536,8 +554,8 @@
                         <button id="btn-changelog" class="settings-action-btn" style="background:#9e9e9e;">📜 開發日誌</button>
                     </div>
                     <hr>
-                    <div style="text-align:left; margin-bottom:5px;">修改管理員密碼:</div>
-                    <input id="new-admin-pwd" class="swal2-input" placeholder="輸入新密碼" value="${systemSettings.password}">
+                    <div style="text-align:left; margin-bottom:5px; color:#666;">秘書處通行碼：請到 02 總表上方選單「產生新的秘書處通行碼」更換。</div>
+                    <button id="btn-signout" class="settings-action-btn" style="background:#9e9e9e;">🚪 這台裝置登出</button>
                 `,
                 showCancelButton: true,
                 confirmButtonText: '儲存變更',
@@ -626,7 +644,7 @@
                                         fetch(GOOGLE_SCRIPT_URL, {
                                             method: 'POST',
                                             mode: 'no-cors',
-                                            body: JSON.stringify({ action: 'cleanup', eventId: currentEventId })
+                                            body: JSON.stringify({ action: 'cleanup', eventId: currentEventId, idToken: fbIdToken })
                                         });
                                         Swal.fire('活動已結束', '來賓照片已同步從雲端刪除', 'success');
                                     }
@@ -643,12 +661,7 @@
                     document.getElementById('btn-clear').onclick = () => { Swal.close(); clearGuestList(); };
                     document.getElementById('btn-del-evt').onclick = () => { Swal.close(); deleteEvent(); };
                     document.getElementById('btn-changelog').onclick = () => { Swal.close(); showChangelog(); };
-                },
-                preConfirm: () => { return document.getElementById('new-admin-pwd').value; }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const newPwd = result.value;
-                    if(newPwd) { db.ref('settings/password').set(newPwd); Swal.fire('成功', '密碼已更新', 'success'); }
+                    document.getElementById('btn-signout').onclick = () => { Swal.close(); firebase.auth().signOut(); };
                 }
             });
         }
@@ -863,7 +876,7 @@
             opts = opts || {};
             if (!eventId) return Promise.resolve(0);
             if (allEvents[eventId] && allEvents[eventId].closed) return Promise.resolve(0);
-            const url = GOOGLE_SCRIPT_URL + `?op=get_all&type=internal&eventId=${eventId}&_t=${Date.now()}`;
+            const url = GOOGLE_SCRIPT_URL + `?op=get_all&type=internal&eventId=${eventId}&idToken=${encodeURIComponent(fbIdToken)}&_t=${Date.now()}`;
             return fetch(url)
                 .then(r => r.json())
                 .then(data => {
@@ -1333,7 +1346,7 @@
                 
                 // 蝦霸備註：這裡使用 JSONP 或者是直接 CORS (GAS 若有設定 Access-Control-Allow-Origin: *)
                 // 如果遇到 CORS 錯誤，請確認 GAS 腳本的 doGet 回傳是否正確設置 Header
-                fetch(GOOGLE_SCRIPT_URL + `?op=get_all&type=${typeParam}${eventIdParam}&_t=${new Date().getTime()}`)
+                fetch(GOOGLE_SCRIPT_URL + `?op=get_all&type=${typeParam}${eventIdParam}&idToken=${encodeURIComponent(fbIdToken)}&_t=${new Date().getTime()}`)
                     .then(r => r.json())
                     .then(data => {
                         if(data.status === 'error') return Swal.fire("錯誤", data.message || "未知錯誤", "error");
