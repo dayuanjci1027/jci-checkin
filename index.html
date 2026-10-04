@@ -504,7 +504,10 @@
 
         function unlockSystem() {
             const inputPwd = document.getElementById('lock-password').value.trim();
-            firebase.auth().signInWithEmailAndPassword(SECRETARY_EMAIL, inputPwd).then(() => {
+            // 通行碼可設 4 碼：實際密碼＝'jci@'＋通行碼；舊長碼照樣能登（MAX 2026-10-04）
+            firebase.auth().signInWithEmailAndPassword(SECRETARY_EMAIL, 'jci@' + inputPwd)
+                .catch(e => { if (inputPwd.length >= 6) return firebase.auth().signInWithEmailAndPassword(SECRETARY_EMAIL, inputPwd); throw e; })
+                .then(() => {
                 document.getElementById('lock-password').value = '';
                 Swal.fire({ icon: 'success', title: '登入成功', timer: 1000, showConfirmButton: false });
             }).catch(() => {
