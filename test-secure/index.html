@@ -877,7 +877,7 @@
             if (!eventId) return Promise.resolve(0);
             if (allEvents[eventId] && allEvents[eventId].closed) return Promise.resolve(0);
             const url = GOOGLE_SCRIPT_URL + `?op=get_all&type=internal&eventId=${eventId}&idToken=${encodeURIComponent(fbIdToken)}&_t=${Date.now()}`;
-            return fetch(url)
+            return freshIdToken().catch(() => fbIdToken).then(t => fetch(url.replace(/idToken=[^&]*/, 'idToken=' + encodeURIComponent(t || ''))))
                 .then(r => r.json())
                 .then(data => {
                     if (!data || data.status === 'error') return 0;
@@ -1346,7 +1346,7 @@
                 
                 // 蝦霸備註：這裡使用 JSONP 或者是直接 CORS (GAS 若有設定 Access-Control-Allow-Origin: *)
                 // 如果遇到 CORS 錯誤，請確認 GAS 腳本的 doGet 回傳是否正確設置 Header
-                fetch(GOOGLE_SCRIPT_URL + `?op=get_all&type=${typeParam}${eventIdParam}&idToken=${encodeURIComponent(fbIdToken)}&_t=${new Date().getTime()}`)
+                freshIdToken().catch(() => fbIdToken).then(t => fetch(GOOGLE_SCRIPT_URL + `?op=get_all&type=${typeParam}${eventIdParam}&idToken=${encodeURIComponent(t || '')}&_t=${new Date().getTime()}`))
                     .then(r => r.json())
                     .then(data => {
                         if(data.status === 'error') return Swal.fire("錯誤", data.message || "未知錯誤", "error");
